@@ -1,0 +1,44 @@
+<header class="topbar">
+  <div class="topbar-left">
+    <img class="topbar-logo" src="assets/logo/Logo.png" alt="DevConnect logo" />
+    <span class="topbar-title">DevConnect</span>
+  </div>
+
+  <div class="topbar-search">
+    <div class="search-wrapper">
+      <input
+        type="text"
+        class="search-input"
+        placeholder="Buscar publicaciones o @usuarios..."
+        [value]="searchQuery"
+        (input)="onSearchInput($any($event.target).value)"
+        (blur)="closeDropdown()"
+        autocomplete="off"
+        aria-label="Buscar publicaciones o usuarios"
+      />
+
+      <ul class="search-dropdown" *ngIf="showDropdown" role="listbox">
+        <li
+          class="search-suggestion"
+          role="option"
+          *ngFor="let user of suggestions"
+          (mousedown)="selectUser(user)"
+        >
+          <span class="suggestion-avatar">{{ getUserInitials(user) }}</span>
+          <span class="suggestion-info">
+            <span class="suggestion-name">{{ user.name || user.username }}</span>
+            <span class="suggestion-username" *ngIf="user.username">@{{ user.username }}</span>
+          </span>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="topbar-profile">
+    <button type="button" class="btn-create-post" routerLink="/home/create-post" aria-label="Crear publicación">+ Publicar</button>
+    <button type="button" class="profile-avatar" data-cy="home-profile-link" routerLink="/profile" aria-label="Mi perfil">
+      <img *ngIf="avatarSafe" [src]="avatarSafe" class="profile-avatar-img" alt="Foto de perfil" />
+      <span *ngIf="!avatarSafe">{{ initials }}</span>
+    </button>
+  </div>
+</header>

@@ -1,0 +1,232 @@
+﻿<aside class="sidebar">
+  <nav>
+    <button type="button" data-cy="home-sidebar-home" routerLink="/home">Inicio</button>
+    <button type="button" routerLink="/home/suggestions">Sugerencias</button>
+    <button #premiumTriggerButton type="button" (click)="openPremiumModal()">Premium</button>
+  </nav>
+
+  <hr class="sidebar-divider" />
+
+  <section class="feed-filters" *ngIf="vm$ | async as vm">
+    <div class="filters-header">
+      <h3>Filtrar feed</h3>
+      <small>{{ vm.activeFiltersLabel }}</small>
+    </div>
+
+    <div class="active-filters" *ngIf="vm.activeFilterChips.length > 0 || vm.activeFilterOverflowCount > 0">
+      <button
+        type="button"
+        class="active-filter-chip"
+        *ngFor="let filter of vm.activeFilterChips"
+        [class.active-filter-chip-follow]="filter.kind === 'follow'"
+        (click)="filter.kind === 'follow' ? setFollowOnly(false) : removeSelectedTag(filter.id!, vm.selectedTagIds)"
+      >
+        <span>{{ filter.label }}</span>
+        <span aria-hidden="true">x</span>
+      </button>
+
+      <span
+        class="active-filter-chip active-filter-chip-more"
+        *ngIf="vm.activeFilterOverflowCount > 0"
+        aria-hidden="true"
+      >
+        +{{ vm.activeFilterOverflowCount }}
+      </span>
+    </div>
+
+    <p class="filters-block-title">Autores</p>
+
+    <button
+      type="button"
+      class="follow-only-btn"
+      [class.active]="vm.followOnly"
+      [attr.aria-pressed]="vm.followOnly"
+      (click)="setFollowOnly(!vm.followOnly)"
+    >
+      <span>Sólo autores que sigo</span>
+    </button>
+
+    <p class="filters-block-title">Coincidencia</p>
+
+    <div class="match-mode" role="group" aria-label="Modo de coincidencia">
+      <button
+        type="button"
+        [class.active]="vm.matchMode === 'any'"
+        (click)="setMatchMode('any')"
+      >
+        <span>Uno o más</span>
+        <span class="match-mode-badge" aria-hidden="true">OR</span>
+      </button>
+      <button
+        type="button"
+        [class.active]="vm.matchMode === 'all'"
+        (click)="setMatchMode('all')"
+      >
+        <span>Todos</span>
+        <span class="match-mode-badge" aria-hidden="true">AND</span>
+      </button>
+    </div>
+
+    <p class="filters-block-title">Tags</p>
+
+    <p class="filters-status" *ngIf="vm.isLoadingFilters">Cargando tags...</p>
+    <p class="filters-status" *ngIf="!vm.isLoadingFilters && vm.tagCategories.length === 0">No hay tags para filtrar.</p>
+
+    <!-- Cada categoria funciona como acordeon para compactar el sidebar. -->
+    <details
+      class="filter-category"
+      *ngFor="let category of vm.tagCategories"
+      [open]="shouldOpenCategory(category, vm.selectedTagIds)"
+    >
+      <summary class="filter-category-header">
+        <span class="filter-category-title">
+          <span>{{ getCategoryLabel(category.name) }}</span>
+          <span class="filter-category-count" *ngIf="getCategorySelectedCount(category, vm.selectedTagIds) > 0">
+            ({{ getCategorySelectedCount(category, vm.selectedTagIds) }})
+          </span>
+          <span
+            class="filter-category-summary"
+            *ngIf="getCategorySelectedSummary(category, vm.selectedTagIds)"
+          >
+            · {{ getCategorySelectedSummary(category, vm.selectedTagIds) }}
+          </span>
+        </span>
+        <span class="filter-category-chevron" aria-hidden="true">▸</span>
+      </summary>
+
+      <!-- Chips interactivos: reemplazan checkbox + texto para seleccion rapida. -->
+      <div class="filter-tags">
+        <button
+          type="button"
+          class="filter-tag"
+          *ngFor="let tag of getCategoryTags(category, vm.selectedTagIds)"
+          [class.selected]="vm.selectedTagIds.has(tag.id)"
+          [attr.aria-pressed]="vm.selectedTagIds.has(tag.id)"
+          (click)="onTagToggle(tag.id, vm.selectedTagIds)"
+        >
+          {{ tag.name }}
+        </button>
+      </div>
+    </details>
+
+    <p class="filters-error" *ngIf="vm.filterError">{{ vm.filterError }}</p>
+
+    <button type="button" class="clear-btn" (click)="clearFilters()">Limpiar filtros</button>
+  </section>
+</aside>
+
+<div
+  class="premium-modal-backdrop"
+  [class.is-open]="isPremiumModalOpen"
+  [attr.aria-hidden]="!isPremiumModalOpen"
+  (click)="isPremiumModalOpen && closePremiumModal()"
+>
+  <div
+    class="premium-modal"
+    role="dialog"
+    [attr.aria-modal]="isPremiumModalOpen ? 'true' : null"
+    aria-labelledby="premium-modal-title"
+    aria-describedby="premium-modal-subtitle"
+    [attr.inert]="isPremiumModalOpen ? null : ''"
+    (click)="$event.stopPropagation()"
+  >
+    <button
+      #premiumCloseButton
+      type="button"
+      class="premium-modal-close"
+      aria-label="Cerrar modal"
+      [attr.tabindex]="isPremiumModalOpen ? null : -1"
+      (click)="closePremiumModal()"
+    >
+      ×
+    </button>
+    <header class="premium-modal-header">
+      <h2 id="premium-modal-title">DevConnect Premium</h2>
+    </header>
+
+    <p id="premium-modal-subtitle" class="premium-modal-subtitle">Impulsa tu perfil profesional como desarrollador.</p>
+
+    <ul class="premium-modal-benefits">
+      <li>
+        <span class="premium-modal-benefit-icon" aria-hidden="true">✓</span>
+        <span class="premium-modal-benefit-text">Mentoría con desarrolladores con más experiencia</span>
+      </li>
+      <li>
+        <span class="premium-modal-benefit-icon" aria-hidden="true">✓</span>
+        <span class="premium-modal-benefit-text">Mejora de tu currículum y preparación para nuevas oportunidades</span>
+      </li>
+      <li>
+        <span class="premium-modal-benefit-icon" aria-hidden="true">✓</span>
+        <span class="premium-modal-benefit-text">Ayuda para encontrar oportunidades laborales</span>
+      </li>
+      <li>
+        <span class="premium-modal-benefit-icon" aria-hidden="true">✓</span>
+        <span class="premium-modal-benefit-text">Acceso prioritario a funcionalidades y recomendaciones</span>
+      </li>
+    </ul>
+
+    <div class="premium-modal-price-block">
+      <p class="premium-modal-price">5 €/mes</p>
+      <p class="premium-modal-price-note">Cancela cuando quieras</p>
+    </div>
+
+    <div class="premium-modal-actions">
+      <button
+        type="button"
+        class="premium-modal-cta-primary"
+        [attr.tabindex]="isPremiumModalOpen ? null : -1"
+        (click)="openPremiumSoonModal()"
+      >
+        Probar Premium
+      </button>
+      <button
+        type="button"
+        class="premium-modal-cta-secondary"
+        [attr.tabindex]="isPremiumModalOpen ? null : -1"
+        (click)="closePremiumModal()"
+      >
+        Seguir con cuenta gratuita
+      </button>
+    </div>
+  </div>
+</div>
+
+<div
+  class="premium-modal-backdrop"
+  [class.is-open]="isPremiumSoonModalOpen"
+  [attr.aria-hidden]="!isPremiumSoonModalOpen"
+  (click)="isPremiumSoonModalOpen && closePremiumSoonModal()"
+>
+  <div
+    class="premium-modal"
+    role="dialog"
+    [attr.aria-modal]="isPremiumSoonModalOpen ? 'true' : null"
+    aria-labelledby="premium-soon-modal-title"
+    aria-describedby="premium-soon-modal-subtitle"
+    [attr.inert]="isPremiumSoonModalOpen ? null : ''"
+    (click)="$event.stopPropagation()"
+  >
+    <header class="premium-modal-header">
+      <h2 id="premium-soon-modal-title">DevConnect Premium</h2>
+    </header>
+
+    <p id="premium-soon-modal-subtitle" class="premium-modal-subtitle">🚀 Próximamente</p>
+
+    <p class="premium-modal-soon-text">
+      Estamos preparando DevConnect Premium para ofrecer mentoría, mejora de currículum y ayuda para encontrar
+      oportunidades profesionales.
+    </p>
+
+    <div class="premium-modal-actions">
+      <button
+        #premiumSoonConfirmButton
+        type="button"
+        class="premium-modal-cta-primary"
+        [attr.tabindex]="isPremiumSoonModalOpen ? null : -1"
+        (click)="closePremiumSoonModal()"
+      >
+        Entendido
+      </button>
+    </div>
+  </div>
+</div>

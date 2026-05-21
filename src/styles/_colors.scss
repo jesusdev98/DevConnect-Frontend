@@ -1,0 +1,33 @@
+$color-white: #ffffff;
+$color-black: #000000;
+
+$color-primary: #2563eb;
+$color-primary-dark: #1d4ed8;
+$color-primary-light: #3b82f6;
+$color-accent: #0ea5e9;
+
+$color-text-heading: #0f172a;
+$color-text-strong: #334155;
+$color-text-medium: #64748b;
+$color-text-weak: #94a3b8;
+$color-text-inverse: $color-white;
+$color-text-danger: #b91c1c;
+$color-text-success: #166534;
+
+$color-border: #e2e8f0;
+$color-border-strong: #cbd5e1;
+$color-border-soft: #eef2f7;
+$color-border-avatar: rgba(148, 163, 184, 0.16);
+$color-border-overlay: rgba(255, 255, 255, 0.99);
+
+$color-bg-surface: $color-white;
+$color-bg-subtle: #f8fafc;
+$color-bg-hero-end: #f9fafc;
+$color-bg-overlay: rgba($color-black, 0.45);
+$color-bg-backdrop: rgba($color-black, 0.6);
+
+$color-level-badge-bg: rgba($color-primary, 0.1);
+$color-level-badge-border: rgba($color-primary, 0.2);
+
+$color-radial-accent-1: rgba($color-primary, 0.05);
+$color-radial-accent-2: rgba($color-primary, 0.04);

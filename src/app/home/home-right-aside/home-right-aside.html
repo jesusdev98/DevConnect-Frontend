@@ -1,0 +1,56 @@
+<aside class="home-aside-right">
+  <!-- Bloque 1: usuarios con mayor actividad reciente en el feed. -->
+  <section class="active-devs">
+    <h3 class="aside-section-title">Devs Más Activos</h3>
+    <ng-container *ngIf="activeDevs$ | async as devs">
+      <p class="trending-empty" *ngIf="devs.length === 0">Aún no hay actividad.</p>
+      <ul class="active-devs-list" *ngIf="devs.length > 0">
+        <li class="active-dev-item" *ngFor="let dev of devs; let i = index">
+          <span class="dev-rank" [attr.data-rank]="i + 1">
+            <ng-container *ngIf="i === 0">&#129351;</ng-container>
+            <ng-container *ngIf="i === 1">&#129352;</ng-container>
+            <ng-container *ngIf="i === 2">&#129353;</ng-container>
+            <ng-container *ngIf="i > 2">{{ i + 1 }}</ng-container>
+          </span>
+          <a class="dev-avatar-link" [routerLink]="getDevProfileRoute(dev)" [attr.aria-label]="'Ir al perfil de ' + dev.name">
+            <div class="dev-avatar">
+              <img *ngIf="dev.avatarSafe" [src]="dev.avatarSafe" class="dev-avatar-img" alt="Foto de perfil" />
+              <span *ngIf="!dev.avatarSafe">{{ dev.initials }}</span>
+            </div>
+          </a>
+          <a class="dev-name dev-profile-link" [routerLink]="getDevProfileRoute(dev)" [title]="dev.name">
+            {{ dev.name }}
+          </a>
+          <button
+            type="button"
+            class="btn-follow"
+            [class.following]="isFollowingDev(dev.id)"
+            (click)="toggleFollow(dev)"
+            [attr.aria-label]="getFollowAriaLabel(dev.id)"
+            [attr.title]="getFollowAriaLabel(dev.id)"
+          >
+            {{ isFollowingDev(dev.id) ? 'Siguiendo' : 'Seguir' }}
+          </button>
+          <span class="followers-count">{{ getDevFollowerCount(dev.id) }} seguidores</span>
+        </li>
+      </ul>
+    </ng-container>
+  </section>
+
+  <hr class="aside-divider" />
+
+  <!-- Bloque 2: etiquetas mas usadas para descubrir temas calientes. -->
+  <section class="trending-tags">
+    <h3 class="aside-section-title">Etiquetas en tendencia</h3>
+    <ng-container *ngIf="trendingTags$ | async as tags">
+      <p class="trending-empty" *ngIf="tags.length === 0">Aún no hay etiquetas.</p>
+      <ul class="trending-tags-list" *ngIf="tags.length > 0">
+        <li class="trending-tag-item" *ngFor="let tag of tags; let i = index">
+          <span class="tag-rank">{{ i + 1 }}</span>
+          <span class="tag-chip">{{ tag.name }}</span>
+          <span class="tag-count">{{ tag.posts }} {{ tag.posts === 1 ? 'publicación' : 'publicaciones' }}</span>
+        </li>
+      </ul>
+    </ng-container>
+  </section>
+</aside>

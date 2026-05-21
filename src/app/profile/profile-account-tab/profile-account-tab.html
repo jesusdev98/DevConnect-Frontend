@@ -1,0 +1,239 @@
+<!-- Tab de cuenta: perfil profesional, enlaces editables y cambio de contraseña. -->
+<div class="account-panel">
+  <!-- Tarjeta principal del perfil profesional. -->
+  <section class="profile-card">
+    <h3 class="card-title">Perfil profesional</h3>
+
+    <div class="alert alert-success" *ngIf="profileDetailsSuccess" data-cy="profile-details-success">
+      {{ profileDetailsSuccess }}
+    </div>
+
+    <div class="alert alert-error" *ngIf="profileDetailsError" data-cy="profile-details-error">
+      {{ profileDetailsError }}
+    </div>
+
+    <!-- Modo lectura: enseña el estado actual del perfil antes de editar. -->
+    <ng-container *ngIf="!isEditingProfileDetails; else profileDetailsEditor">
+      <div class="profile-summary">
+        <div class="summary-block">
+          <span class="summary-label">Área de especialidad</span>
+          <p class="summary-value">{{ profileHeadline || 'Desarrollador Full Stack' }}</p>
+        </div>
+
+        <div class="summary-block">
+          <span class="summary-label">Skills</span>
+          <div class="skills-list" *ngIf="normalizedProfileSkills.length > 0; else noSkills">
+            <span class="skill" *ngFor="let skill of normalizedProfileSkills">{{ skill }}</span>
+          </div>
+          <ng-template #noSkills>
+            <p class="empty-state">Aún no hay skills guardadas.</p>
+          </ng-template>
+        </div>
+      </div>
+
+      <!-- Botón principal para entrar en modo edición. -->
+      <button type="button" class="btn-profile-edit" (click)="startProfileEditRequested.emit()">
+        Editar perfil profesional
+      </button>
+    </ng-container>
+
+    <!-- Modo edición: formulario simple para actualizar área y skills. -->
+    <ng-template #profileDetailsEditor>
+      <div class="profile-form">
+        <div class="form-group">
+          <label for="profile-headline">Área de especialidad</label>
+          <input
+            id="profile-headline"
+            type="text"
+            [value]="profileHeadlineDraft"
+            (input)="onProfileHeadlineInput($event)"
+            maxlength="120"
+            placeholder="Ej. Estudiante de desarrollo web"
+            [disabled]="isSavingProfileDetails"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="profile-skills">Skills</label>
+          <textarea
+            id="profile-skills"
+            rows="4"
+            [value]="profileSkillsDraft"
+            (input)="onProfileSkillsInput($event)"
+            maxlength="500"
+            placeholder="Angular, TypeScript, Laravel"
+            [disabled]="isSavingProfileDetails"
+          ></textarea>
+          <small class="helper-text">Separa las skills con comas o saltos de línea.</small>
+        </div>
+
+        <div class="profile-edit-actions">
+          <button type="button" class="btn-link-save" (click)="saveProfileDetailsRequested.emit()" [disabled]="isSavingProfileDetails">
+            {{ isSavingProfileDetails ? 'Guardando...' : 'Guardar cambios' }}
+          </button>
+          <button type="button" class="btn-link-cancel" (click)="cancelProfileEditRequested.emit()" [disabled]="isSavingProfileDetails">
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </ng-template>
+  </section>
+
+  <!-- Enlaces personales: ahora se editan en memoria, luego podrán persistirse. -->
+  <section class="links-section">
+    <h3>Enlaces</h3>
+    <div class="alert alert-success" *ngIf="linksSuccess">{{ linksSuccess }}</div>
+    <div class="alert alert-error" *ngIf="linksError">{{ linksError }}</div>
+    <ul>
+      <li *ngFor="let link of links" [attr.data-cy]="'profile-link-item-' + link.type">
+        <ng-container *ngIf="editingLink !== link.type; else editLinkRow">
+          <span>{{ link.icon }}</span>
+          <span class="link-label">{{ link.label }}:</span>
+          <a *ngIf="link.url" [href]="link.url" target="_blank" rel="noopener" class="link-anchor">{{ link.url }}</a>
+          <span *ngIf="!link.url" class="link-empty-state">No añadido</span>
+          <button
+            type="button"
+            class="btn-link-edit"
+            [attr.data-cy]="'profile-link-edit-' + link.type"
+            (click)="startEditLinkRequested.emit(link.type)"
+            [disabled]="isSavingLinks"
+          >
+            Editar
+          </button>
+        </ng-container>
+
+        <ng-template #editLinkRow>
+          <span>{{ link.icon }}</span>
+          <span class="link-label">{{ link.label }}:</span>
+          <input
+            class="link-input"
+            type="url"
+            data-cy="profile-link-input"
+            [value]="linkEditValue"
+            (input)="onLinkInput($event)"
+            placeholder="https://..."
+            [disabled]="isSavingLinks"
+          />
+          <button type="button" class="btn-link-save" data-cy="profile-link-save" (click)="saveLinkRequested.emit()" [disabled]="isSavingLinks">
+            {{ isSavingLinks ? 'Guardando...' : 'Guardar' }}
+          </button>
+          <button type="button" class="btn-link-cancel" (click)="cancelEditLinkRequested.emit()" [disabled]="isSavingLinks">Cancelar</button>
+        </ng-template>
+      </li>
+    </ul>
+  </section>
+
+  <!-- Formulario de seguridad: cambio de contraseña del usuario. -->
+  <section class="profile-card">
+    <h3 class="card-title">Cambiar contraseña</h3>
+
+    <div class="alert alert-success" *ngIf="changePasswordSuccess" data-cy="change-password-success">
+      {{ changePasswordSuccess }}
+    </div>
+
+    <div class="alert alert-error" *ngIf="changePasswordError" data-cy="change-password-error">
+      {{ changePasswordError }}
+    </div>
+
+    <form
+      [formGroup]="changePasswordForm"
+      (ngSubmit)="changePasswordRequested.emit()"
+      novalidate
+      data-cy="change-password-form"
+      class="profile-form"
+    >
+      <div class="form-group">
+        <label for="current_password">Contraseña actual</label>
+        <input
+          id="current_password"
+          type="password"
+          formControlName="current_password"
+          data-cy="change-password-current"
+          placeholder="Tu contraseña actual"
+        />
+        <small
+          class="error"
+          *ngIf="currentPasswordControl?.touched && currentPasswordControl?.hasError('required')"
+        >
+          La contraseña actual es obligatoria.
+        </small>
+        <small class="error" *ngIf="changePasswordValidationErrors['current_password']?.length">
+          {{ changePasswordValidationErrors['current_password'][0] }}
+        </small>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Nueva contraseña</label>
+        <input
+          id="password"
+          type="password"
+          formControlName="password"
+          data-cy="change-password-new"
+          placeholder="Empieza en mayúscula y usa carácter especial"
+        />
+        <small
+          class="error"
+          *ngIf="passwordControl?.touched && passwordControl?.hasError('required')"
+        >
+          La nueva contraseña es obligatoria.
+        </small>
+        <small
+          class="error"
+          *ngIf="passwordControl?.touched && passwordControl?.hasError('minlength')"
+        >
+          Mínimo 8 caracteres.
+        </small>
+        <small
+          class="error"
+          *ngIf="passwordControl?.touched && passwordControl?.hasError('pattern')"
+        >
+          Debe empezar en mayúscula y contener un carácter especial.
+        </small>
+        <small class="error" *ngIf="changePasswordValidationErrors['password']?.length">
+          {{ changePasswordValidationErrors['password'][0] }}
+        </small>
+      </div>
+
+      <div class="form-group">
+        <label for="password_confirmation">Confirmar nueva contraseña</label>
+        <input
+          id="password_confirmation"
+          type="password"
+          formControlName="password_confirmation"
+          data-cy="change-password-confirm"
+          placeholder="Repite la nueva contraseña"
+        />
+        <small
+          class="error"
+          *ngIf="passwordConfirmationControl?.touched && passwordConfirmationControl?.hasError('required')"
+        >
+          Debes confirmar la nueva contraseña.
+        </small>
+        <small
+          class="error"
+          *ngIf="passwordConfirmationControl?.touched && passwordsDoNotMatch"
+        >
+          Las contraseñas no coinciden.
+        </small>
+      </div>
+
+      <button type="submit" class="btn-submit" [disabled]="isChangingPassword" data-cy="change-password-submit">
+        {{ isChangingPassword ? 'Actualizando...' : 'Actualizar contraseña' }}
+      </button>
+    </form>
+  </section>
+
+  <section class="profile-card danger-card" *ngIf="canDeleteOwnAccount" data-cy="delete-account-section">
+    <h3 class="card-title">Eliminar cuenta</h3>
+    <p class="danger-text">Esta acción eliminará tu cuenta y no se puede deshacer. Perderás acceso a tu perfil y datos asociados.</p>
+    <button
+      type="button"
+      class="btn-danger"
+      data-cy="delete-account-button"
+      [disabled]="isDeletingAccount"
+      (click)="onDeleteAccountClick()"
+    >
+      {{ isDeletingAccount ? 'Eliminando...' : 'Eliminar mi cuenta' }}
+    </button>
+  </section>
+</div>

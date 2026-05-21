@@ -1,0 +1,62 @@
+<!-- Formulario para crear una publicación usando tags existentes del catálogo. -->
+<section class="create-post-page">
+  <h1>{{ pageTitle }}</h1>
+
+  <form [formGroup]="form" (ngSubmit)="onSubmit()">
+    <label for="post-title">Título</label>
+    <input
+      id="post-title"
+      type="text"
+      formControlName="title"
+      placeholder="Escribe el título de tu publicación..."
+    />
+    <p class="error" *ngIf="form.get('title')?.touched && form.get('title')?.invalid && form.get('title')?.errors?.['required']">El título es obligatorio.</p>
+    <p class="error" *ngIf="form.get('title')?.touched && form.get('title')?.invalid && form.get('title')?.errors?.['minlength']">Mínimo 5 caracteres.</p>
+
+    <label for="post-content">Contenido</label>
+    <textarea
+      id="post-content"
+      formControlName="content"
+      placeholder="Escribe tu publicación..."
+    ></textarea>
+    <p class="error" *ngIf="form.get('content')?.touched && form.get('content')?.invalid && form.get('content')?.errors?.['required']">El contenido es obligatorio.</p>
+    <p class="error" *ngIf="form.get('content')?.touched && form.get('content')?.invalid && form.get('content')?.errors?.['minlength']">Mínimo 20 caracteres.</p>
+
+    <div class="tags-header">
+      <label>Tags por categoría</label>
+      <small>{{ selectedTagsCount }}/15 seleccionados</small>
+    </div>
+
+    <p class="catalog-status" *ngIf="isLoadingPost">Cargando publicación...</p>
+    <p class="catalog-status" *ngIf="isLoadingTags">Cargando catálogo de tags...</p>
+    <p class="catalog-status" *ngIf="!isLoadingTags && !isLoadingPost && tagCategories.length === 0">No hay tags disponibles en este momento.</p>
+
+    <div class="tag-categories-grid">
+      <section class="tag-category" *ngFor="let category of tagCategories">
+        <header class="tag-category-summary">
+          <span class="tag-category-name">{{ category.name }}</span>
+          <span class="tag-category-meta">
+            <small>{{ getSelectedCountForCategory(category) }}/{{ category.tags.length }}</small>
+          </span>
+        </header>
+
+        <div class="tag-options">
+          <label class="tag-option" *ngFor="let tag of category.tags" [class.selected]="isTagSelected(tag.id)">
+            <input
+              type="checkbox"
+              [checked]="isTagSelected(tag.id)"
+              [disabled]="isSubmitting || isLoadingPost"
+              (change)="onTagToggle(tag.id, $event)"
+            />
+            <span>{{ tag.name }}</span>
+          </label>
+        </div>
+      </section>
+    </div>
+
+    <p class="error-global" *ngIf="errorMsg">{{ errorMsg }}</p>
+
+    <button type="submit" [disabled]="isSubmitting || isLoadingTags || isLoadingPost">{{ submitLabel }}</button>
+    <button type="button" (click)="cancelEdit()" [disabled]="isSubmitting">Cancelar</button>
+  </form>
+</section>

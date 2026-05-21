@@ -1,0 +1,12 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": ["cypress"],
+    "lib": ["ES2022", "DOM"],
+    "strict": false,
+    "noPropertyAccessFromIndexSignature": false
+  },
+  "include": [
+    "**/*.ts"
+  ]
+}

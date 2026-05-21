@@ -1,0 +1,10 @@
+{
+  "success": false,
+  "message": "validation error",
+  "errors": {
+    "title": [
+      "El titulo ya existe."
+    ]
+  }
+}
+

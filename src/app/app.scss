@@ -1,0 +1,14 @@
+/* :host sirve para estilizar el contenedor del propio componente (app-root ene ste caso). */
+:host {
+  display: block;
+  min-height: 100vh;
+  background-color: #f7f9fc;
+}
+
+
+nav a {
+  margin-right: 16px;
+  text-decoration: none;
+  color: #1e3a8a;
+  font-weight: 600;
+}

@@ -1,0 +1,12 @@
+.env
+.env.local
+.env.*
+node_modules
+dist
+.angular
+cypress/videos
+cypress/screenshots
+cypress-output.txt
+.git
+.vscode
+html-report-*.html

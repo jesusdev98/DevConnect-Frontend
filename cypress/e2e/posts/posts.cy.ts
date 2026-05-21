@@ -1,0 +1,217 @@
+import { buildMockPost } from '../../builders/PostBuilder';
+import { mockHomeBootstrapApi } from '../../support/intercepts/homeApi';
+
+/**
+ * E2E posts coverage without touching a real database.
+ *
+ * Strategy:
+ * - mock auth/session and API responses with cy.intercept.
+ * - verify payload/query emitted by the SPA.
+ * - keep tests deterministic and backend-independent.
+ */
+describe('E2E - Posts (mocked API)', () => {
+  let emptyPostsBody: {
+    success: boolean;
+    message: string;
+    data: unknown[];
+  };
+  let titleExistsValidationBody: {
+    success: boolean;
+    message: string;
+    errors: Record<string, string[]>;
+  };
+
+  const interceptEmptyPostsFeed = (alias = 'getPosts') => {
+    cy.intercept('GET', '**/api/posts*', {
+      statusCode: 200,
+      body: emptyPostsBody,
+    }).as(alias);
+  };
+
+  before(() => {
+    cy.fixture('posts/empty-success.json').then((postsBody) => {
+      emptyPostsBody = postsBody as {
+        success: boolean;
+        message: string;
+        data: unknown[];
+      };
+    });
+
+    cy.fixture('posts/title-exists-422.json').then((validationBody) => {
+      titleExistsValidationBody = validationBody as {
+        success: boolean;
+        message: string;
+        errors: Record<string, string[]>;
+      };
+    });
+  });
+
+  beforeEach(() => {
+    mockHomeBootstrapApi();
+  });
+
+  it('creates a post and sends expected payload', () => {
+    interceptEmptyPostsFeed();
+
+    cy.intercept('POST', '**/api/posts', (req) => {
+      expect(req.body.title).to.eq('Mi post Cypress');
+      expect(req.body.content).to.eq('Este es un contenido de prueba largo para Cypress.');
+      expect(req.body.tag_ids).to.deep.eq([10]);
+
+      req.reply({
+        statusCode: 201,
+        body: {
+          success: true,
+          message: 'created',
+          data: {
+            id: 123,
+            title: req.body.title,
+            content: req.body.content,
+            tags: ['Angular'],
+            createdAt: new Date().toISOString(),
+          },
+        },
+      });
+    }).as('createPost');
+
+    cy.visit('/home/create-post');
+    cy.waitForPostsBootstrap();
+    cy.createPostByUI({
+      title: 'Mi post Cypress',
+      content: 'Este es un contenido de prueba largo para Cypress.',
+      tagName: 'Angular',
+    });
+
+    cy.wait('@createPost');
+    cy.url({ timeout: 15000 }).should('include', '/home');
+  });
+
+  it('shows the created post in feed after redirect to home', () => {
+    const createdPost = buildMockPost({
+      id: 321,
+      title: 'Post visible en feed',
+      content: 'Contenido de prueba para validar render en post-list.',
+      tags: ['Angular'],
+    });
+    let created = false;
+
+    cy.intercept('GET', '**/api/posts*', (req) => {
+      if (!created) {
+        req.reply({
+          statusCode: 200,
+          body: emptyPostsBody,
+        });
+        return;
+      }
+
+      req.reply({
+        statusCode: 200,
+        body: {
+          success: true,
+          message: 'ok',
+          data: [createdPost],
+        },
+      });
+    }).as('getPosts');
+
+    cy.intercept('POST', '**/api/posts', (req) => {
+      created = true;
+
+      req.reply({
+        statusCode: 201,
+        body: {
+          success: true,
+          message: 'created',
+          data: createdPost,
+        },
+      });
+    }).as('createPost');
+
+    cy.visit('/home/create-post');
+    cy.waitForPostsBootstrap();
+    cy.createPostByUI({
+      title: createdPost.title,
+      content: createdPost.content,
+      tagName: 'Angular',
+    });
+
+    cy.wait('@createPost');
+    cy.location('pathname', { timeout: 15000 }).should('match', /\/home\/?$/);
+    cy.contains('article.post-item h3', createdPost.title).should('be.visible');
+  });
+
+  it('shows backend validation message when create post returns 422', () => {
+    cy.intercept('POST', '**/api/posts', {
+      statusCode: 422,
+      body: titleExistsValidationBody,
+    }).as('createPost422');
+
+    cy.visit('/home/create-post');
+    cy.waitForPostsBootstrap();
+    cy.createPostByUI({
+      title: 'Titulo repetido',
+      content: 'Este contenido tambien es valido y suficientemente largo.',
+    });
+
+    cy.wait('@createPost422');
+    cy.get('.error-global').should('be.visible').and('contain.text', 'titulo ya existe');
+  });
+
+  it('requests filtered feed with tag_ids[] and match when a tag is selected', () => {
+    const filteredPost = buildMockPost({
+      id: 500,
+      title: 'Filtrado Angular',
+      content: 'Resultado filtrado',
+      tags: ['Angular'],
+    });
+    const unfilteredPost = buildMockPost({
+      id: 1,
+      title: 'Sin filtro',
+      content: 'Listado inicial',
+      tags: ['General'],
+    });
+    let sawFilteredRequest = false;
+
+    cy.intercept('GET', '**/api/posts*', (req) => {
+      const tagId = req.query['tag_ids[]'];
+
+      if (tagId !== undefined) {
+        sawFilteredRequest = true;
+        expect(tagId).to.eq('10');
+        expect(req.query.match).to.eq('any');
+
+        req.reply({
+          statusCode: 200,
+          body: {
+            success: true,
+            message: 'ok',
+            data: [filteredPost],
+          },
+        });
+        return;
+      }
+
+      req.reply({
+        statusCode: 200,
+        body: {
+          success: true,
+          message: 'ok',
+          data: [unfilteredPost],
+        },
+      });
+    }).as('getPosts');
+
+    cy.visit('/home');
+    cy.waitForPostsBootstrap({ waitPosts: true });
+
+    // Open category and select the tag in sidebar.
+    cy.contains('summary', 'Framework').click();
+    cy.contains('button.filter-tag', 'Angular').click();
+    cy.wait('@getPosts');
+
+    cy.then(() => {
+      expect(sawFilteredRequest).to.eq(true);
+    });
+    cy.contains('article.post-item h3', 'Filtrado Angular').should('be.visible');
+  });
+});

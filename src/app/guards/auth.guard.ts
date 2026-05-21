@@ -1,0 +1,45 @@
+import { Injectable } from '@angular/core';
+import { CanActivate, Router, UrlTree } from '@angular/router';
+import { Observable, of } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
+import { AuthService } from '../services/auth.service';
+
+/**
+ * Route guard for private SPA areas.
+ *
+ * Strategy:
+ * - If there is already an in-memory user, allow navigation.
+ * - Otherwise call /api/auth/me to restore session from Sanctum cookies.
+ * - If restoration fails, redirect to /login.
+ *
+ * Security note:
+ * - authorization is still enforced by the backend; the guard only protects
+ *   navigation flow inside the SPA and avoids exposing private screens.
+ */
+@Injectable({
+  providedIn: 'root',
+})
+export class AuthGuard implements CanActivate {
+  constructor(
+    private readonly authService: AuthService,
+    private readonly router: Router,
+  ) {}
+
+  /**
+   * Validates access to protected routes using session-based auth state.
+   *
+   * @returns Observable that resolves to true or a redirect UrlTree.
+   */
+  canActivate(): Observable<boolean | UrlTree> {
+    // Si ya hay user en memoria, permite navegar.
+    if (this.authService.isAuthenticated()) {
+      return of(true);
+    }
+
+    // Si no hay user en memoria, intenta restaurar sesion con /api/auth/me.
+    return this.authService.me().pipe(
+      map(() => true),
+      catchError(() => of(this.router.parseUrl('/login'))),
+    );
+  }
+}

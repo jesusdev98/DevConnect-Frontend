@@ -1,0 +1,21 @@
+<section class="ui-toast-stack" aria-live="polite" aria-atomic="false">
+  <article
+    class="ui-toast"
+    *ngFor="let msg of feedback.messages$ | async"
+    [class.ui-toast--success]="msg.type === 'success'"
+    [class.ui-toast--error]="msg.type === 'error'"
+    [class.ui-toast--info]="msg.type === 'info'"
+    role="status"
+  >
+    <span class="ui-toast__text">{{ msg.text }}</span>
+    <button
+      type="button"
+      class="ui-toast__close"
+      (click)="feedback.dismiss(msg.id)"
+      aria-label="Cerrar mensaje"
+      title="Cerrar mensaje"
+    >
+      ×
+    </button>
+  </article>
+</section>

@@ -1,0 +1,16 @@
+@mixin stable-text($line-height: null) {
+  font-family: 'Segoe UI', var(--font-sans);
+
+  @if $line-height != null {
+    line-height: $line-height;
+  }
+}
+
+@mixin stable-text-numeric($line-height: null) {
+  @include stable-text($line-height);
+  font-variant-numeric: tabular-nums;
+}
+
+@mixin stable-title($line-height: 1.3) {
+  @include stable-text($line-height);
+}

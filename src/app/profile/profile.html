@@ -1,0 +1,190 @@
+<!-- Contenedor principal del perfil: orquesta tabs y delega UI en subcomponentes. -->
+<div class="profile-page" data-cy="profile-root">
+  <!-- Cabecera global con navegación básica y salida de sesión. -->
+  <header class="profile-header">
+    <div class="profile-header-left">
+      <img src="assets/logo/Logo.png" alt="Logotipo de DevConnect" class="header-logo" />
+      <span class="header-title">DevConnect</span>
+    </div>
+    <div class="profile-header-right">
+      <button type="button" class="btn-back" routerLink="/home">Volver al inicio</button>
+      <button type="button" class="btn-logout" data-cy="profile-logout" (click)="logout()">Cerrar sesión</button>
+    </div>
+  </header>
+
+  <main class="profile-main">
+    <section class="profile-loading" *ngIf="isLoadingProfile">
+      <p>Cargando perfil...</p>
+    </section>
+
+    <section class="profile-not-found" *ngIf="!isLoadingProfile && profileNotFound">
+      <p>Perfil no encontrado.</p>
+      <button type="button" class="btn-back-home" routerLink="/home">Volver al inicio</button>
+    </section>
+
+    <ng-container *ngIf="!isLoadingProfile && !profileNotFound && profile">
+      <app-profile-hero
+        *ngIf="profile"
+        [initials]="initials"
+        [profileUserId]="profile.id"
+        [displayName]="displayName"
+        [displayUsername]="displayUsername"
+        [profileRoleLabel]="profileRoleLabel"
+        [profileSkills]="profileSkills"
+        [isEditingBio]="isEditingBio"
+        [displayBio]="displayBio"
+        [isOwnProfile]="isOwnProfile"
+        [bioDraft]="bioDraft"
+        [isSavingBio]="isSavingBio"
+        [bioSuccess]="bioSuccess"
+        [bioError]="bioError"
+        [isFollowActionBusy]="isFollowActionBusy"
+        [followedByCurrentUser]="followedByCurrentUser"
+        [postsCount]="postsCount"
+        [commentsCount]="commentsCount"
+        [followersCount]="followersCount"
+        [avatar]="profile.avatar"
+        (bioDraftChange)="bioDraft = $event"
+        (startBioEditRequested)="startBioEdit()"
+        (saveBioRequested)="saveBio()"
+        (cancelBioEditRequested)="cancelBioEdit()"
+        (followToggleRequested)="toggleFollowProfile()"
+        (avatarChangeRequested)="onAvatarChange($event)"
+      ></app-profile-hero>
+
+      <!-- Navegación local del perfil: cambia entre publicaciones, guardados y cuenta. -->
+      <div class="tabs">
+        <button class="tab" [class.active]="activeTab === 'posts'" (click)="setActiveTab('posts')">Publicaciones</button>
+        <button
+          class="tab"
+          *ngIf="showAccountTab"
+          [class.active]="activeTab === 'liked'"
+          (click)="setActiveTab('liked')"
+        >
+          Favoritos
+        </button>
+        <button
+          class="tab"
+          *ngIf="showAccountTab"
+          [class.active]="activeTab === 'saved'"
+          (click)="setActiveTab('saved')"
+        >
+          Guardados
+        </button>
+        <button class="tab" [class.active]="activeTab === 'logros'" (click)="setActiveTab('logros')">Logros</button>
+        <button
+          class="tab"
+          *ngIf="showAccountTab"
+          [class.active]="activeTab === 'cuenta'"
+          (click)="setActiveTab('cuenta')"
+        >
+          Cuenta
+        </button>
+      </div>
+
+      <!-- Tab de publicaciones: lista principal del contenido del usuario. -->
+      <ng-container *ngIf="activeTab === 'posts'">
+        <ng-container *ngIf="profilePosts$ | async as posts">
+          <app-profile-posts-tab
+            [posts]="posts"
+            [postsError]="postsError"
+            [postsLoading]="false"
+            [postsErrorMessage]="'No se pudieron cargar las publicaciones.'"
+            [emptyMessage]="'Aún no hay publicaciones.'"
+            [viewMode]="'own'"
+            [canTogglePostLike]="canTogglePostLike"
+            [hasLikedPostFn]="hasLikedPostRef"
+            [getPostLikeCountFn]="getPostLikeCountRef"
+            [canEditPostFn]="canEditPostRef"
+            (openPostRequested)="openPostDetail($event)"
+            (editPostRequested)="openEditPost($event)"
+            (togglePostLikeRequested)="togglePostLike($event)"
+            (saveStateChanged)="onPostSaveStateChanged($event)"
+          ></app-profile-posts-tab>
+        </ng-container>
+      </ng-container>
+
+      <ng-container *ngIf="activeTab === 'saved' && showAccountTab">
+        <app-profile-posts-tab
+          [posts]="savedPosts"
+          [postsError]="savedPostsError"
+          [postsLoading]="isLoadingSavedPosts"
+          [postsErrorMessage]="'No se pudieron cargar las publicaciones guardadas.'"
+          [emptyMessage]="'No tienes publicaciones guardadas.'"
+          [viewMode]="'saved'"
+          [canTogglePostLike]="canTogglePostLike"
+          [hasLikedPostFn]="hasLikedPostRef"
+          [getPostLikeCountFn]="getPostLikeCountRef"
+          [canEditPostFn]="canEditPostRef"
+          (openPostRequested)="openPostDetail($event)"
+          (editPostRequested)="openEditPost($event)"
+          (togglePostLikeRequested)="togglePostLike($event)"
+          (saveStateChanged)="onPostSaveStateChanged($event)"
+        ></app-profile-posts-tab>
+      </ng-container>
+
+      <ng-container *ngIf="activeTab === 'liked' && showAccountTab">
+        <app-profile-posts-tab
+          [posts]="likedPosts"
+          [postsError]="likedPostsError"
+          [postsLoading]="isLoadingLikedPosts"
+          [postsErrorMessage]="'No se pudieron cargar las publicaciones favoritas.'"
+          [emptyMessage]="'No tienes publicaciones favoritas.'"
+          [viewMode]="'liked'"
+          [canTogglePostLike]="canTogglePostLike"
+          [hasLikedPostFn]="hasLikedPostRef"
+          [getPostLikeCountFn]="getPostLikeCountRef"
+          [canEditPostFn]="canEditPostRef"
+          (openPostRequested)="openPostDetail($event)"
+          (editPostRequested)="openEditPost($event)"
+          (togglePostLikeRequested)="togglePostLike($event)"
+          (saveStateChanged)="onPostSaveStateChanged($event)"
+        ></app-profile-posts-tab>
+      </ng-container>
+
+      <!-- Tab de logros: siempre montado para que la petición se haga al cargar el perfil. -->
+      <app-profile-achievements-tab [hidden]="activeTab !== 'logros'" [userId]="profile.id"></app-profile-achievements-tab>
+
+      <!-- Tab de cuenta: solo aparece en el perfil propio porque contiene datos editables. -->
+      <app-profile-account-tab
+        *ngIf="activeTab === 'cuenta' && showAccountTab"
+        [links]="links"
+        [profileHeadline]="profileRoleLabel"
+        [profileSkills]="profileSkills"
+        [isEditingProfileDetails]="isEditingProfileDetails"
+        [profileHeadlineDraft]="profileHeadlineDraft"
+        [profileSkillsDraft]="profileSkillsDraft"
+        [isSavingProfileDetails]="isSavingProfileDetails"
+        [profileDetailsSuccess]="profileDetailsSuccess"
+        [profileDetailsError]="profileDetailsError"
+        [editingLink]="editingLink"
+        [linkEditValue]="linkEditValue"
+        [linksSuccess]="linksSuccess"
+        [linksError]="linksError"
+        [isSavingLinks]="isSavingLinks"
+        [changePasswordForm]="changePasswordForm"
+        [changePasswordSuccess]="changePasswordSuccess"
+        [changePasswordError]="changePasswordError"
+        [changePasswordValidationErrors]="changePasswordValidationErrors"
+        [isChangingPassword]="isChangingPassword"
+        [canDeleteOwnAccount]="canDeleteOwnAccount"
+        [isDeletingAccount]="isDeletingAccount"
+        [deleteOwnAccountAction]="onDeleteAccountRef"
+        (profileHeadlineDraftChange)="profileHeadlineDraft = $event"
+        (profileSkillsDraftChange)="profileSkillsDraft = $event"
+        (startProfileEditRequested)="startProfileDetailsEdit()"
+        (saveProfileDetailsRequested)="saveProfileDetails()"
+        (cancelProfileEditRequested)="cancelProfileDetailsEdit()"
+        (linkEditValueChange)="linkEditValue = $event"
+        (startEditLinkRequested)="startEditLink($event)"
+        (saveLinkRequested)="saveLink()"
+        (cancelEditLinkRequested)="cancelEditLink()"
+        (changePasswordRequested)="onChangePassword()"
+      ></app-profile-account-tab>
+
+      <app-profile-admin-tab
+        *ngIf="activeTab === 'cuenta' && showAccountTab && currentUser?.role === 'admin'"
+      ></app-profile-admin-tab>
+    </ng-container>
+  </main>
+</div>

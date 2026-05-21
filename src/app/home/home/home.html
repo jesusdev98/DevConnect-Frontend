@@ -1,0 +1,17 @@
+<div class="home-layout" data-cy="home-root">
+  <!-- Header comun para todas las vistas hijas de Home. -->
+  <app-home-header></app-home-header>
+
+  <div class="home-body">
+    <!-- Sidebar comun para todas las vistas hijas de Home. -->
+    <app-home-sidebar></app-home-sidebar>
+
+    <main class="home-main">
+      <!-- Outlet interno de Home: aqui cambian las vistas hijas (feed principal/create-post). -->
+      <router-outlet></router-outlet>
+    </main>
+
+    <!-- Aside derecho movido a componente dedicado. -->
+    <app-home-right-aside></app-home-right-aside>
+  </div>
+</div>

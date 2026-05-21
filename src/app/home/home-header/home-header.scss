@@ -1,0 +1,247 @@
+@use '../../../styles/text-render-fixes' as tr;
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 40px;
+  background: var(--color-text-strong);
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.topbar-logo {
+  width: 52px;
+  height: 56px;
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+.topbar-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  @include tr.stable-text(1.25);
+  color: #fff;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topbar-search {
+  flex: 1;
+  max-width: 480px;
+  min-width: 0;
+}
+
+.search-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.search-input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 0.9rem;
+  transition: border-color 0.2s, background 0.2s;
+
+  &::placeholder {
+    color: #64748b;
+    font-size: 0.88rem;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    background: rgba(255, 255, 255, 0.12);
+  }
+}
+
+.search-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  z-index: 1100;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.search-suggestion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover {
+    background: #f1f5f9;
+  }
+}
+
+.suggestion-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  @include tr.stable-text(1.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.suggestion-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.suggestion-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.suggestion-username {
+  font-size: 0.78rem;
+  @include tr.stable-text(1.25);
+  color: #64748b;
+}
+
+.topbar-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.btn-create-post {
+  padding: 7px 16px;
+  border: none;
+  border-radius: 8px;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  @include tr.stable-text(1.25);
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover {
+    background: var(--color-primary-hover);
+  }
+}
+
+.profile-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  @include tr.stable-text(1.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  letter-spacing: 0.03em;
+  border: none;
+  cursor: pointer;
+  overflow: hidden;
+  padding: 0;
+  transition: background 0.2s, transform 0.15s;
+
+  .profile-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    display: block;
+  }
+
+  &:hover {
+    background: var(--color-primary-hover);
+    transform: scale(1.08);
+  }
+}
+
+@media (max-width: 900px) {
+  .topbar {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "left profile"
+      "search search";
+    height: auto;
+    padding: 10px 20px;
+    gap: 8px;
+  }
+
+  .topbar-left { grid-area: left; }
+  .topbar-profile { grid-area: profile; }
+  .topbar-search {
+    grid-area: search;
+    max-width: none;
+    width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  .topbar {
+    padding: 8px 12px;
+    gap: 6px;
+  }
+
+  .topbar-logo {
+    width: 42px;
+    height: 46px;
+  }
+
+  .btn-create-post {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+
+  .topbar-profile {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 480px) {
+  .topbar-title {
+    display: none;
+  }
+}

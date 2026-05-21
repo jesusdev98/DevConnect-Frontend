@@ -1,0 +1,95 @@
+<div class="landing">
+
+  <header class="lp-header">
+    <div class="lp-brand">
+      <img src="assets/logo/Logo.png" alt="DevConnect Logo" class="lp-logo-img" />
+      <span class="lp-brand-name">DevConnect</span>
+    </div>
+    <nav class="lp-nav">
+      <a href="#login-section">Iniciar sesión</a>
+      <a routerLink="/register" class="lp-btn-nav">Registrarse</a>
+    </nav>
+  </header>
+
+  <section class="hero" id="login-section">
+    <div class="hero-content">
+      <div class="hero-text">
+        <h1>Conecta.<br>Aprende.<br>Crece.</h1>
+        <p>La red social para personas del mundo de la informática.</p>
+        <a routerLink="/register" class="hero-btn">Únete ahora</a>
+      </div>
+
+      <div class="login-card">
+        <div class="auth-header">
+          <h2 data-cy="login-title">Inicia sesión</h2>
+          <p>
+            ¿No tienes cuenta?
+            <a data-cy="register-link" routerLink="/register">regístrate ahora</a>
+          </p>
+        </div>
+
+        <form data-cy="login-form" [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form" novalidate>
+          <div class="form-group">
+            <label for="identifier">Email o usuario</label>
+            <input
+              id="identifier"
+              type="text"
+              formControlName="identifier"
+              data-cy="login-identifier"
+              placeholder="Introduce tu email o usuario"
+              autocomplete="username"
+              [attr.aria-invalid]="isSubmitted && loginForm.get('identifier')?.invalid ? 'true' : 'false'"
+              (input)="clearSubmitState()"
+            />
+            <small class="error" *ngIf="isSubmitted && loginForm.get('identifier')?.errors?.['required']">
+              Este campo es obligatorio.
+            </small>
+            <small class="error" *ngIf="isSubmitted && (loginForm.get('identifier')?.errors?.['minlength'] || loginForm.get('identifier')?.errors?.['maxlength'])">
+              El identificador debe tener entre 3 y 255 caracteres.
+            </small>
+          </div>
+
+          <div class="form-group">
+            <label for="password">Contraseña</label>
+            <input
+              id="password"
+              type="password"
+              formControlName="password"
+              data-cy="login-password"
+              placeholder="Introduce tu contraseña"
+              autocomplete="current-password"
+              [attr.aria-invalid]="isSubmitted && loginForm.get('password')?.invalid ? 'true' : 'false'"
+              (input)="clearSubmitState()"
+            />
+            <small class="error" *ngIf="isSubmitted && loginForm.get('password')?.errors?.['required']">
+              Este campo es obligatorio.
+            </small>
+            <small class="error" *ngIf="isSubmitted && (loginForm.get('password')?.errors?.['minlength'] || loginForm.get('password')?.errors?.['maxlength'])">
+              La contraseña debe tener entre 8 y 255 caracteres.
+            </small>
+          </div>
+
+          <div
+            class="error-global"
+            data-cy="login-error-message"
+            role="alert"
+            aria-live="assertive"
+            [hidden]="!loginErrorMessage"
+            [attr.aria-hidden]="!loginErrorMessage"
+          >
+            {{ loginErrorMessage || '' }}
+          </div>
+
+          <button type="submit" class="submit-btn" data-cy="login-submit" [disabled]="isLoading">
+            {{ isLoading ? 'Entrando...' : 'Entrar' }}
+          </button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+<footer class="lp-footer">
+    <p>© 2026 DevConnect — Creado para la comunidad tech</p>
+  </footer>
+
+</div>

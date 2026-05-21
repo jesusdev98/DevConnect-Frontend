@@ -1,0 +1,207 @@
+import { buildE2ECredentials } from '../../builders/UserBuilder';
+
+describe('E2E - Profile Admin Delete', () => {
+  let uniqueUserSeed = 0;
+
+  const buildUniqueUser = (prefix: string) => {
+    const user = buildE2ECredentials(prefix);
+    const normalizedPrefix = prefix.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8).toLowerCase();
+    const token = `${Date.now().toString().slice(-6)}${(uniqueUserSeed++).toString().padStart(2, '0')}`;
+    const username = `${normalizedPrefix}_${token}`;
+
+    user.usuario = username;
+    user.username = username;
+    user.email = `test_${normalizedPrefix}_${token}@test.com`;
+
+    return user;
+  };
+
+  const registerTestUser = (user: ReturnType<typeof buildE2ECredentials>) => {
+    return cy.registerByAPI({
+      ...user,
+      passwordConfirmation: user.passwordConfirmation,
+    }).then((response) => {
+      expect(response.status).to.eq(201);
+      const persistedUsername = response.body?.data?.user?.username;
+      expect(persistedUsername).to.be.a('string').and.not.be.empty;
+      return persistedUsername as string;
+    });
+  };
+
+  const seedAdminUser = () => {
+    return cy.exec('cmd /c "cd /d ..\\backend && php artisan db:seed --class=AdminUserSeeder --no-interaction"', {
+      failOnNonZeroExit: true,
+    }).then((result) => {
+      expect(result.code ?? 0).to.eq(0);
+    });
+  };
+
+  const loginAsAdmin = () => {
+    cy.visit('/login');
+    cy.loginByUI({
+      identifier: 'admin@devconnect.com',
+      password: 'Miproyecto2026$',
+    });
+  };
+
+  const confirmAdminCanSearchUser = (username: string) => {
+    return cy.window().then((win) => {
+      return win
+        .fetch(`http://127.0.0.1:8001/api/users?search=${encodeURIComponent(username)}`, {
+          credentials: 'include',
+          headers: {
+            Accept: 'application/json',
+          },
+        })
+        .then((response) => {
+          expect(response.status).to.eq(200);
+          return response.json();
+        })
+        .then((body) => {
+          const users = body.data ?? [];
+          const persistedUser = users.find((user: { username?: string }) => user.username === username);
+          expect(persistedUser, `persisted user ${username}`).to.exist;
+          return persistedUser.username as string;
+        });
+    });
+  };
+
+  const confirmAdminCannotSearchUser = (username: string) => {
+    return cy.window().then((win) => {
+      return win
+        .fetch(`http://127.0.0.1:8001/api/users?search=${encodeURIComponent(username)}`, {
+          credentials: 'include',
+          headers: {
+            Accept: 'application/json',
+          },
+        })
+        .then((response) => {
+          expect(response.status).to.eq(200);
+          return response.json();
+        })
+        .then((body) => {
+          const users = body.data ?? [];
+          expect(users.some((user: { username?: string }) => user.username === username)).to.eq(false);
+        });
+    });
+  };
+
+  const openCuentaWithAdminSection = () => {
+    cy.visitProtectedRoute('/profile');
+    cy.get('[data-cy=profile-root]').should('be.visible');
+    cy.contains('button.tab', 'Cuenta', { timeout: 15000 }).click();
+    cy.contains('Gestion de usuarios', { timeout: 15000 }).should('be.visible');
+    cy.get('.admin-search-input')
+      .should('be.visible')
+      .should('not.be.disabled');
+  };
+
+  const searchVisibleAdminRow = (username: string) => {
+    cy.get('.admin-search-input')
+      .should('be.visible')
+      .should('not.be.disabled')
+      .clear()
+      .type(`@${username}`, { delay: 50 })
+      .blur();
+
+    return cy.contains('[data-cy=admin-user-row]', `@${username}`, { timeout: 15000 })
+      .should('be.visible');
+  };
+
+  const waitForAdminDeleteCompletion = (username: string) => {
+    cy.contains('[data-cy=admin-user-row]', `@${username}`, { timeout: 15000 })
+      .should('not.exist');
+  };
+
+  beforeEach(() => {
+    cy.routeLaravelBrowserTraffic();
+    cy.resetAuthState();
+    seedAdminUser();
+  });
+
+  it('admin deletes user', () => {
+    const user = buildUniqueUser('admin_delete_user');
+
+    registerTestUser(user).then((persistedUsername) => {
+      loginAsAdmin();
+      confirmAdminCanSearchUser(persistedUsername).then((searchableUsername) => {
+        openCuentaWithAdminSection();
+
+        searchVisibleAdminRow(searchableUsername).within(() => {
+          cy.contains('button', 'Eliminar').click();
+        });
+
+        cy.contains('button', 'Confirmar', { timeout: 15000 }).click();
+        waitForAdminDeleteCompletion(searchableUsername);
+        confirmAdminCannotSearchUser(searchableUsername);
+      });
+    });
+  });
+
+  it('cancel delete', () => {
+    const user = buildUniqueUser('admin_cancel_delete');
+
+    registerTestUser(user).then((persistedUsername) => {
+      loginAsAdmin();
+      confirmAdminCanSearchUser(persistedUsername).then((searchableUsername) => {
+        openCuentaWithAdminSection();
+
+        searchVisibleAdminRow(searchableUsername).within(() => {
+          cy.contains('button', 'Eliminar').click();
+        });
+
+        cy.contains('button', 'Cancelar', { timeout: 15000 }).click();
+
+        cy.contains('[data-cy=admin-user-row]', `@${searchableUsername}`, { timeout: 15000 })
+          .should('be.visible');
+      });
+    });
+  });
+
+  it('cannot delete admin', () => {
+    loginAsAdmin();
+    openCuentaWithAdminSection();
+
+    cy.get('.admin-search-input').clear().type('@admin', { delay: 50 }).blur();
+    cy.get('[data-cy=admin-user-row]', { timeout: 15000 });
+
+    cy.contains('[data-cy=admin-user-row]', '@admin', { timeout: 15000 })
+      .should('be.visible')
+      .within(() => {
+      cy.contains('Administrador').should('be.visible');
+      cy.contains('button', 'Eliminar').should('not.exist');
+    });
+  });
+
+  it('double click delete safe', () => {
+    const user = buildUniqueUser('admin_double_delete');
+
+    registerTestUser(user).then((persistedUsername) => {
+      loginAsAdmin();
+      confirmAdminCanSearchUser(persistedUsername).then((searchableUsername) => {
+        openCuentaWithAdminSection();
+
+        searchVisibleAdminRow(searchableUsername).within(() => {
+          cy.contains('button', 'Eliminar').click();
+        });
+
+        cy.contains('button', 'Confirmar', { timeout: 15000 }).click();
+        waitForAdminDeleteCompletion(searchableUsername);
+        confirmAdminCannotSearchUser(searchableUsername);
+      });
+    });
+  });
+
+  it('invalid search', () => {
+    loginAsAdmin();
+    openCuentaWithAdminSection();
+
+    cy.get('.admin-search-input').clear().type('@', { delay: 50 }).blur();
+    cy.get('[data-cy=admin-user-row]').should('not.exist');
+
+    cy.get('.admin-search-input').clear().type('test', { delay: 50 }).blur();
+
+    cy.contains('Escribe @ para buscar usuarios', { timeout: 15000 }).should('be.visible');
+    cy.get('[data-cy=admin-user-row]').should('not.exist');
+  });
+});

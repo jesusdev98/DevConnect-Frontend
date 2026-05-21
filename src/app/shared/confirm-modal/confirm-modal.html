@@ -1,0 +1,21 @@
+<ng-container *ngIf="state$ | async as state">
+  <div
+    class="confirm-modal-backdrop"
+    *ngIf="state.isOpen"
+    (click)="onCancel()"
+  >
+    <div
+      class="confirm-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="confirm-title"
+      (click)="$event.stopPropagation()"
+    >
+      <p id="confirm-title" class="confirm-modal-message">{{ state.message || message }}</p>
+      <div class="confirm-modal-actions">
+        <button type="button" class="confirm-modal-cancel" (click)="onCancel()">Cancelar</button>
+        <button type="button" class="confirm-modal-confirm" (click)="onConfirm()">Confirmar</button>
+      </div>
+    </div>
+  </div>
+</ng-container>

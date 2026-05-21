@@ -1,0 +1,9 @@
+@forward './colors';
+@forward './shadows';
+@forward './typography';
+
+@use './colors' as c;
+
+$gradient-hero: linear-gradient(180deg, rgba(c.$color-white, 0.994) 0%, rgba(c.$color-bg-hero-end, 0.982) 100%);
+$gradient-avatar: linear-gradient(145deg, c.$color-primary 0%, c.$color-primary-light 100%);
+$gradient-xp-fill: linear-gradient(90deg, c.$color-primary 0%, c.$color-accent 100%);

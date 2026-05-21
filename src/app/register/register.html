@@ -1,0 +1,147 @@
+<div class="register-page">
+
+  <header class="reg-header">
+    <div class="reg-brand">
+      <img src="assets/logo/Logo.png" alt="DevConnect logo" class="reg-logo" />
+      <span class="reg-brand-name">DevConnect</span>
+    </div>
+    <nav class="reg-nav">
+      <span class="reg-nav-label">¿Ya tienes cuenta?</span>
+      <a routerLink="/login" class="reg-btn-login">Iniciar sesión</a>
+    </nav>
+  </header>
+
+  <main class="reg-main">
+
+    <div class="reg-card">
+      <div class="reg-card-header">
+        <h2 data-cy="register-title">Crea tu cuenta</h2>
+        <p>Únete a la comunidad de desarrolladores</p>
+      </div>
+
+      <div class="error-global" data-cy="register-validation-message" role="alert"
+           [hidden]="!validationMessage" [attr.aria-hidden]="!validationMessage">
+        {{ validationMessage || '' }}
+      </div>
+      <div class="error-global" data-cy="register-error-message" role="alert"
+           [hidden]="!registerErrorMessage" [attr.aria-hidden]="!registerErrorMessage">
+        {{ registerErrorMessage || '' }}
+      </div>
+
+      <form data-cy="register-form" [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="reg-form" novalidate>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="reg-nombre">Nombre</label>
+            <input
+              id="reg-nombre"
+              type="text"
+              formControlName="nombre"
+              data-cy="register-nombre"
+              placeholder="Tu nombre"
+              (input)="clearSubmitState()"
+            />
+            <small class="error" *ngIf="isSubmitted && registerForm.get('nombre')?.errors?.['required']">El nombre es obligatorio.</small>
+            <small class="error" *ngIf="isSubmitted && (registerForm.get('nombre')?.errors?.['minlength'] || registerForm.get('nombre')?.errors?.['maxlength'])">Entre 2 y 100 caracteres.</small>
+            <small class="error" *ngIf="isSubmitted && registerForm.get('nombre')?.errors?.['pattern']">Solo letras y espacios.</small>
+            <small class="error" *ngIf="isSubmitted && serverErrors['nombre']?.length">{{ serverErrors['nombre'][0] }}</small>
+          </div>
+
+          <div class="form-group">
+            <label for="reg-apellidos">Apellidos</label>
+            <input
+              id="reg-apellidos"
+              type="text"
+              formControlName="apellidos"
+              data-cy="register-apellidos"
+              placeholder="Tus apellidos"
+              (input)="clearSubmitState()"
+            />
+            <small class="error" *ngIf="isSubmitted && registerForm.get('apellidos')?.errors?.['required']">Los apellidos son obligatorios.</small>
+            <small class="error" *ngIf="isSubmitted && (registerForm.get('apellidos')?.errors?.['minlength'] || registerForm.get('apellidos')?.errors?.['maxlength'])">Entre 2 y 150 caracteres.</small>
+            <small class="error" *ngIf="isSubmitted && registerForm.get('apellidos')?.errors?.['pattern']">Solo letras y espacios.</small>
+            <small class="error" *ngIf="isSubmitted && serverErrors['apellidos']?.length">{{ serverErrors['apellidos'][0] }}</small>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="reg-usuario">Usuario</label>
+          <input
+            id="reg-usuario"
+            type="text"
+            formControlName="usuario"
+            data-cy="register-usuario"
+            placeholder="nombre_usuario"
+            (input)="clearSubmitState()"
+          />
+          <small class="error" *ngIf="isSubmitted && registerForm.get('usuario')?.errors?.['required']">El usuario es obligatorio.</small>
+          <small class="error" *ngIf="isSubmitted && (registerForm.get('usuario')?.errors?.['minlength'] || registerForm.get('usuario')?.errors?.['maxlength'])">Entre 3 y 20 caracteres.</small>
+          <small class="error" *ngIf="isSubmitted && registerForm.get('usuario')?.errors?.['pattern']">Solo letras, números, guion y guion bajo.</small>
+          <small class="error" *ngIf="isSubmitted && serverErrors['usuario']?.length">{{ serverErrors['usuario'][0] }}</small>
+        </div>
+
+        <div class="form-group">
+          <label for="reg-email">Email</label>
+          <input
+            id="reg-email"
+            type="email"
+            formControlName="email"
+            data-cy="register-email"
+            placeholder="tu@email.com"
+            (input)="clearSubmitState()"
+          />
+          <small class="error" *ngIf="isSubmitted && registerForm.get('email')?.errors?.['required']">El email es obligatorio.</small>
+          <small class="error" data-cy="register-email-error" *ngIf="isSubmitted && (registerForm.get('email')?.errors?.['email'] || registerForm.get('email')?.errors?.['maxlength'])">Email inválido.</small>
+          <small class="error" *ngIf="isSubmitted && serverErrors['email']?.length">{{ serverErrors['email'][0] }}</small>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="reg-password">Contraseña</label>
+            <input
+              id="reg-password"
+              type="password"
+              formControlName="password"
+              data-cy="register-password"
+              placeholder="Mayúscula + carácter especial"
+              (input)="clearSubmitState()"
+            />
+            <small class="error" *ngIf="isSubmitted && registerForm.get('password')?.errors?.['required']">La contraseña es obligatoria.</small>
+            <small class="error" *ngIf="isSubmitted && (registerForm.get('password')?.errors?.['minlength'] || registerForm.get('password')?.errors?.['maxlength'])">Entre 8 y 255 caracteres.</small>
+            <small class="error" *ngIf="isSubmitted && registerForm.get('password')?.errors?.['pattern']">Mayúscula inicial + carácter especial.</small>
+            <small class="error" *ngIf="isSubmitted && serverErrors['password']?.length">{{ serverErrors['password'][0] }}</small>
+          </div>
+
+          <div class="form-group">
+            <label for="reg-password-confirm">Confirmar contraseña</label>
+            <input
+              id="reg-password-confirm"
+              type="password"
+              formControlName="password_confirmation"
+              data-cy="register-password-confirm"
+              placeholder="Repite la contraseña"
+              (input)="clearSubmitState()"
+            />
+            <small class="error" *ngIf="isSubmitted && registerForm.get('password_confirmation')?.errors?.['required']">Debes confirmar la contraseña.</small>
+            <small class="error" data-cy="register-password-confirmation-error"
+              *ngIf="registerForm.get('password')?.value !== registerForm.get('password_confirmation')?.value && isSubmitted">
+              Las contraseñas no coinciden.
+            </small>
+            <small class="error" *ngIf="isSubmitted && serverErrors['password_confirmation']?.length">{{ serverErrors['password_confirmation'][0] }}</small>
+          </div>
+        </div>
+
+        <button type="submit" data-cy="register-submit" class="btn-submit" [disabled]="isLoading">
+          {{ isLoading ? 'Registrando...' : 'Crear cuenta' }}
+        </button>
+
+      </form>
+    </div>
+
+  </main>
+
+  <footer class="reg-footer">
+    <p>© 2026 DevConnect — Creado para la comunidad tech</p>
+  </footer>
+
+</div>

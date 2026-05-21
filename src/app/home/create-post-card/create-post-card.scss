@@ -1,0 +1,61 @@
+.create-post-card {
+  padding: 18px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.create-post-card textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 80px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  resize: vertical;
+  font-size: 0.95rem;
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  color: var(--color-text);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.create-post-card textarea::placeholder {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.create-post-card textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+  caret-color: var(--color-primary);
+}
+
+.create-post-card button {
+  padding: 9px 20px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary);
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.create-post-card button:hover {
+  background: var(--color-primary-hover);
+}
+
+@media (max-width: 600px) {
+  .create-post-card {
+    padding: 14px;
+  }
+
+  .create-post-card button {
+    width: 100%;
+  }
+}

@@ -1,0 +1,287 @@
+<!-- Tab de publicaciones del perfil: lista, tags, likes y acceso al detalle. -->
+<p class="posts-empty" *ngIf="postsError">{{ postsErrorMessage }}</p>
+<p class="posts-empty" *ngIf="!postsError && postsLoading">Cargando publicaciones...</p>
+<p class="posts-empty" *ngIf="!postsError && !postsLoading && posts.length === 0">{{ emptyMessage }}</p>
+
+<section class="posts-grid" *ngIf="!postsLoading && posts.length > 0">
+  <article class="post-card" *ngFor="let post of posts">
+    <div class="post-card-top"></div>
+    <h4 class="post-card-heading">
+      <button
+        type="button"
+        class="post-card-link"
+        (click)="openPostRequested.emit(post)"
+      >
+        {{ post.title || 'Publicación sin título' }}
+      </button>
+      <div class="post-card-actions">
+        <button
+          *ngIf="canToggleSavePost()"
+          type="button"
+          class="bookmark-btn"
+          [class.is-saved]="post.isSaved"
+          [disabled]="isSavingPost(post.id)"
+          (click)="toggleSavePost(post)"
+          [attr.aria-label]="getSavePostAriaLabel(post)"
+          [attr.title]="getSavePostAriaLabel(post)"
+        >
+          <app-icon-bookmark></app-icon-bookmark>
+        </button>
+        <button
+          *ngIf="canEditPostFn(post)"
+          type="button"
+          class="edit-btn"
+          (click)="editPostRequested.emit(post)"
+          aria-label="Editar publicación"
+          title="Editar publicación"
+        >
+          <app-icon-edit></app-icon-edit>
+        </button>
+        <button
+          *ngIf="canDeletePost(post)"
+          type="button"
+          class="delete-post-btn"
+          (click)="deletePost(post)"
+          aria-label="Eliminar publicación"
+          title="Eliminar publicación"
+        >
+          <app-icon-delete></app-icon-delete>
+        </button>
+      </div>
+    </h4>
+    <p>{{ post.content || 'Sin contenido.' }}</p>
+
+    <div class="post-tags" *ngIf="(post.tags || []).length">
+      <span class="post-tag" *ngFor="let tag of post.tags">#{{ tag }}</span>
+    </div>
+
+    <div class="post-card-footer">
+      <small class="post-date">{{ post.createdAt | date:'shortDate' }}</small>
+      <div class="post-card-metrics">
+        <button
+          type="button"
+          class="like-btn"
+          [class.liked]="hasLikedPostFn(post.id)"
+          [disabled]="!canTogglePostLike"
+          (click)="togglePostLikeRequested.emit(post.id)"
+        >
+          <span class="like-icon">&#10084;</span>
+          <span class="like-count">{{ getPostLikeCountFn(post.id) }}</span>
+        </button>
+        <button
+          type="button"
+          class="comment-count-chip"
+          [class.is-open]="isCommentsOpen(post.id)"
+          (click)="toggleComments(post.id)"
+          [attr.aria-label]="(isCommentsOpen(post.id) ? 'Ocultar' : 'Mostrar') + ' comentarios'"
+        >
+          <span class="comment-icon">&#128172;</span>
+          <span class="comment-count">{{ isCommentsOpen(post.id) ? getVisibleCommentCount(post.id) : post.commentsCount }}</span>
+        </button>
+      </div>
+    </div>
+
+    <section class="comments-panel" *ngIf="isCommentsOpen(post.id)">
+      <h5 class="comments-title">Comentarios</h5>
+
+      <p class="comments-loading" *ngIf="isCommentsLoading(post.id)">Cargando comentarios...</p>
+      <p class="comments-empty" *ngIf="!isCommentsLoading(post.id) && getComments(post.id).length === 0">
+        Sé el primero en comentar.
+      </p>
+
+      <ul class="comments-list" *ngIf="!isCommentsLoading(post.id) && getComments(post.id).length > 0">
+        <li class="comment-item" *ngFor="let comment of getComments(post.id)">
+          <div class="comment-item-header">
+            <span class="comment-author">{{ comment.username }}</span>
+            <div class="comment-item-actions">
+              <button
+                *ngIf="canEditComment(comment)"
+                type="button"
+                class="edit-comment-btn"
+                (click)="openEditComment(post.id, comment.id)"
+                aria-label="Editar comentario"
+                title="Editar comentario"
+              >
+                <app-icon-edit></app-icon-edit>
+              </button>
+              <button
+                *ngIf="canDeleteComment(comment)"
+                type="button"
+                class="delete-comment-btn"
+                (click)="deleteComment(post, comment)"
+                aria-label="Eliminar comentario"
+                title="Eliminar comentario"
+              >
+                <app-icon-delete></app-icon-delete>
+              </button>
+            </div>
+          </div>
+          <p class="comment-text" *ngIf="!isEditFormOpen(post.id, comment.id)">{{ comment.text }}</p>
+          <div class="comment-edit-form" *ngIf="isEditFormOpen(post.id, comment.id)">
+            <textarea
+              #editCommentInput
+              rows="2"
+              [value]="comment.text"
+              [disabled]="isSubmittingComment(post.id)"
+            ></textarea>
+            <div class="comment-edit-actions">
+              <button
+                type="button"
+                class="comment-edit-btn comment-edit-btn--ghost"
+                [disabled]="isSubmittingComment(post.id)"
+                (click)="cancelEditComment(post.id)"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                class="comment-edit-btn comment-edit-btn--primary"
+                [disabled]="isSubmittingComment(post.id)"
+                (click)="saveEditedComment(post, comment, editCommentInput)"
+              >
+                {{ isSubmittingComment(post.id) ? 'Guardando...' : 'Guardar' }}
+              </button>
+            </div>
+          </div>
+          <div class="comment-item-footer">
+            <button
+              type="button"
+              class="like-btn like-btn--sm"
+              [class.liked]="hasLikedComment(comment.id)"
+              (click)="toggleCommentLike(comment.id)"
+              [attr.aria-label]="getCommentLikeAriaLabel(comment.id)"
+              [attr.title]="getCommentLikeAriaLabel(comment.id)"
+            >
+              <span class="like-icon">&#128077;</span>
+              <span class="like-count">{{ getCommentLikeCount(comment.id) }}</span>
+            </button>
+          </div>
+          <div class="reply-action-row">
+            <button
+              *ngIf="!isReplyFormOpen(post.id, comment.id) && !isEditFormOpen(post.id, comment.id)"
+              type="button"
+              class="reply-toggle-btn"
+              (click)="openReplyForm(post.id, comment.id)"
+            >
+              Responder
+            </button>
+          </div>
+          <div class="reply-form" *ngIf="isReplyFormOpen(post.id, comment.id)">
+            <textarea
+              #replyInput
+              rows="2"
+              placeholder="Escribe una respuesta..."
+              [disabled]="isSubmittingComment(post.id)"
+            ></textarea>
+            <div class="reply-form-actions">
+              <button
+                type="button"
+                class="reply-form-btn reply-form-btn--ghost"
+                [disabled]="isSubmittingComment(post.id)"
+                (click)="closeReplyForm(post.id)"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                class="reply-form-btn reply-form-btn--primary"
+                [disabled]="isSubmittingComment(post.id)"
+                (click)="submitReply(post, comment, replyInput)"
+              >
+                {{ isSubmittingComment(post.id) ? 'Enviando...' : 'Enviar respuesta' }}
+              </button>
+            </div>
+          </div>
+          <ul class="replies-list" *ngIf="(comment.replies ?? []).length > 0">
+            <li class="comment-item comment-item--reply" *ngFor="let reply of (comment.replies ?? [])">
+              <div class="comment-item-header">
+                <span class="comment-author">{{ reply.username }}</span>
+                <div class="comment-item-actions">
+                  <button
+                    *ngIf="canEditComment(reply)"
+                    type="button"
+                    class="edit-comment-btn"
+                    (click)="openEditComment(post.id, reply.id)"
+                    aria-label="Editar comentario"
+                    title="Editar comentario"
+                  >
+                    <app-icon-edit></app-icon-edit>
+                  </button>
+                  <button
+                    *ngIf="canDeleteComment(reply)"
+                    type="button"
+                    class="delete-comment-btn"
+                    (click)="deleteComment(post, reply)"
+                    aria-label="Eliminar comentario"
+                    title="Eliminar comentario"
+                  >
+                    <app-icon-delete></app-icon-delete>
+                  </button>
+                </div>
+              </div>
+              <p class="comment-text" *ngIf="!isEditFormOpen(post.id, reply.id)">{{ reply.text }}</p>
+              <div class="comment-edit-form" *ngIf="isEditFormOpen(post.id, reply.id)">
+                <textarea
+                  #editReplyInput
+                  rows="2"
+                  [value]="reply.text"
+                  [disabled]="isSubmittingComment(post.id)"
+                ></textarea>
+                <div class="comment-edit-actions">
+                  <button
+                    type="button"
+                    class="comment-edit-btn comment-edit-btn--ghost"
+                    [disabled]="isSubmittingComment(post.id)"
+                    (click)="cancelEditComment(post.id)"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    class="comment-edit-btn comment-edit-btn--primary"
+                    [disabled]="isSubmittingComment(post.id)"
+                    (click)="saveEditedComment(post, reply, editReplyInput)"
+                  >
+                    {{ isSubmittingComment(post.id) ? 'Guardando...' : 'Guardar' }}
+                  </button>
+                </div>
+              </div>
+              <div class="comment-item-footer">
+                <button
+                  type="button"
+                  class="like-btn like-btn--sm"
+                  [class.liked]="hasLikedComment(reply.id)"
+                  (click)="toggleCommentLike(reply.id)"
+                  [attr.aria-label]="getCommentLikeAriaLabel(reply.id)"
+                  [attr.title]="getCommentLikeAriaLabel(reply.id)"
+                >
+                  <span class="like-icon">&#128077;</span>
+                  <span class="like-count">{{ getCommentLikeCount(reply.id) }}</span>
+                </button>
+              </div>
+            </li>
+          </ul>
+        </li>
+      </ul>
+
+      <div class="comment-form">
+        <textarea
+          #commentInput
+          rows="2"
+          placeholder="Escribe un comentario..."
+          [disabled]="isSubmittingComment(post.id)"
+        ></textarea>
+        <div class="comment-form-actions">
+          <button
+            type="button"
+            (click)="addComment(post, commentInput)"
+            [disabled]="isSubmittingComment(post.id)"
+          >
+            {{ isSubmittingComment(post.id) ? 'Enviando...' : 'Comentar' }}
+          </button>
+        </div>
+      </div>
+    </section>
+  </article>
+</section>
+

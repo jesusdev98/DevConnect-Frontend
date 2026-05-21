@@ -1,0 +1,144 @@
+<!-- Cabecera del perfil: identidad, bio editable, acciones y estadísticas. -->
+<section class="profile-hero">
+  <!-- Avatar principal: se puede cambiar solo en el perfil propio. -->
+  <div class="profile-avatar-wrap" [class.editable]="isOwnProfile">
+    <div class="profile-avatar" [ngClass]="'level-ring-' + currentLevel" (click)="triggerAvatarInput()">
+      <img *ngIf="safeAvatar" [src]="safeAvatar" alt="Foto de perfil" class="profile-avatar-img" />
+      <span *ngIf="!safeAvatar">{{ initials || 'U' }}</span>
+      <div class="avatar-overlay" *ngIf="isOwnProfile">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>
+      </div>
+    </div>
+    <input
+      #avatarInput
+      type="file"
+      accept="image/jpeg,image/png,image/gif,image/webp"
+      class="avatar-file-input"
+      (change)="onAvatarFileSelected($event)"
+    />
+  </div>
+
+  <div class="profile-info">
+    <div class="profile-identity">
+      <h2 class="profile-name">{{ displayName }}</h2>
+      <p class="profile-username" *ngIf="displayUsername">@{{ displayUsername }}</p>
+      <p class="profile-role">{{ profileRoleLabel }}</p>
+    </div>
+
+    <!-- Nivel resumido para dar contexto rápido del progreso del usuario. -->
+    <app-user-level [userId]="profileUserId" [compact]="true" (levelChange)="onLevelChange($event)"></app-user-level>
+
+    <!-- Vista normal de la bio: si no está editando, mostramos el texto final. -->
+    <ng-container *ngIf="!isEditingBio; else bioEditor">
+      <p class="profile-bio">{{ displayBio }}</p>
+      <div class="profile-bio-actions" *ngIf="isOwnProfile">
+        <button type="button" class="btn btn-bio-edit" (click)="startBioEditRequested.emit()">Editar bio</button>
+      </div>
+    </ng-container>
+
+    <!-- Vista de edición de bio: aquí se escribe el borrador antes de guardar. -->
+    <ng-template #bioEditor>
+      <div class="profile-bio-editor">
+        <label for="profile-bio-input">Biografía</label>
+        <textarea
+          id="profile-bio-input"
+          [value]="bioDraft"
+          (input)="onBioDraftInput($event)"
+          [maxLength]="300"
+          [disabled]="isSavingBio"
+        ></textarea>
+        <p class="bio-counter">{{ bioDraft.length }}/300</p>
+        <div class="profile-bio-editor-actions">
+          <button
+            type="button"
+            class="btn btn-bio-save"
+            (click)="saveBioRequested.emit()"
+            [disabled]="isSavingBio"
+          >
+            {{ isSavingBio ? 'Guardando...' : 'Guardar' }}
+          </button>
+          <button
+            type="button"
+            class="btn btn-bio-cancel"
+            (click)="cancelBioEditRequested.emit()"
+            [disabled]="isSavingBio"
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </ng-template>
+
+    <p class="profile-bio-feedback success" *ngIf="bioSuccess">{{ bioSuccess }}</p>
+    <p class="profile-bio-feedback error" *ngIf="bioError">{{ bioError }}</p>
+
+    <!-- Skills visibles como chips para reforzar la especialidad del perfil. -->
+    <div class="profile-skills" *ngIf="profileSkills.length > 0">
+      <span class="profile-skill" *ngFor="let skill of profileSkills">{{ skill }}</span>
+    </div>
+
+    <div class="profile-actions" *ngIf="!isOwnProfile">
+      <button
+        type="button"
+        class="btn btn-follow"
+        (click)="followToggleRequested.emit()"
+        [disabled]="isFollowActionBusy"
+      >
+        {{ followedByCurrentUser ? 'Siguiendo' : 'Seguir' }}
+      </button>
+    </div>
+  </div>
+
+  <div class="profile-stats">
+    <div class="stat">
+      <h3 class="stat-value">{{ postsCount }}</h3>
+      <p class="stat-label">Publicaciones</p>
+    </div>
+    <div class="stat">
+      <h3 class="stat-value">{{ commentsCount }}</h3>
+      <p class="stat-label">Comentarios</p>
+    </div>
+    <div class="stat">
+      <h3 class="stat-value">{{ followersCount }}</h3>
+      <p class="stat-label">Seguidores</p>
+    </div>
+  </div>
+</section>
+
+<!-- Modal de recorte de foto: aparece solo al cambiar el avatar. -->
+<div class="crop-backdrop" *ngIf="cropSrc" (click)="cancelCrop()">
+  <div class="crop-modal" (click)="$event.stopPropagation()">
+    <h3 class="crop-title">Ajustar foto de perfil</h3>
+
+    <div class="crop-preview-wrap">
+      <img
+        class="crop-preview-img"
+        [src]="safeCropSrc"
+        alt="Vista previa"
+        [style.transform]="'scale(' + zoom + ')'"
+      />
+    </div>
+
+    <div class="crop-zoom-controls">
+      <button type="button" class="zoom-btn" (click)="zoomOut()" [disabled]="zoom <= zoomMin">-</button>
+      <input
+        type="range"
+        class="zoom-slider"
+        [min]="zoomMin"
+        [max]="zoomMax"
+        [step]="zoomStep"
+        [value]="zoom"
+        (input)="onZoomInput($event)"
+      />
+      <button type="button" class="zoom-btn" (click)="zoomIn()" [disabled]="zoom >= zoomMax">+</button>
+    </div>
+
+    <div class="crop-actions">
+      <button type="button" class="btn btn-bio-cancel" (click)="cancelCrop()">Cancelar</button>
+      <button type="button" class="btn btn-bio-save" (click)="saveCrop()">Guardar</button>
+    </div>
+  </div>
+</div>

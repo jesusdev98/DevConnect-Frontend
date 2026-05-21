@@ -1,0 +1,58 @@
+<section
+  class="user-level-card"
+  [class.user-level-card--compact]="compact"
+  [attr.data-theme]="levelTheme"
+  data-cy="user-level"
+>
+  <ng-container *ngIf="isLoading">
+    <p class="user-level-loading">Cargando nivel...</p>
+  </ng-container>
+
+  <ng-container *ngIf="!isLoading && hasError">
+    <p class="user-level-error">No se pudo cargar el progreso de nivel.</p>
+  </ng-container>
+
+  <ng-container *ngIf="!isLoading && !hasError && levelData">
+    <div class="level-top">
+      <p class="level-badge" [ngClass]="[badgeLevelClass, isLevelUp ? 'level-up' : '']">
+        <span class="level-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="currentColor" focusable="false">
+            <path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" />
+          </svg>
+        </span>
+        <span>Nivel {{ levelData.level }}</span>
+      </p>
+      <p class="level-percent">{{ progressLabel }}</p>
+    </div>
+
+    <div class="xp-copy" *ngIf="nextXP !== null; else maxLevelCopy">
+      <p class="xp-main">
+        <span class="xp-current">{{ currentXP | number:'1.0-0' }}</span>
+        <span class="xp-separator">/</span>
+        <span class="xp-next">{{ nextXP | number:'1.0-0' }}</span>
+        <span class="xp-unit">XP</span>
+      </p>
+      <p class="xp-subtext">Objetivo: nivel {{ nextLevelLabel }}</p>
+    </div>
+
+    <ng-template #maxLevelCopy>
+      <div class="xp-copy">
+        <p class="xp-main">
+          <span class="xp-current">Nivel máximo alcanzado</span>
+        </p>
+        <p class="xp-subtext">Has completado toda la progresión actual.</p>
+      </div>
+    </ng-template>
+
+    <div
+      class="progress-track"
+      role="progressbar"
+      aria-label="Progreso de nivel"
+      [attr.aria-valuenow]="levelData.progressPercentage"
+      aria-valuemin="0"
+      aria-valuemax="100"
+    >
+      <span class="progress-fill" [style.width.%]="animatedProgress"></span>
+    </div>
+  </ng-container>
+</section>

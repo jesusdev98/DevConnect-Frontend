@@ -1,0 +1,79 @@
+.logros-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+.logro-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  padding: 0;
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+
+  h4 {
+    margin: 0;
+    padding: 14px 16px 6px;
+    font-size: 0.95rem;
+    color: #0f172a;
+  }
+
+  p {
+    margin: 0;
+    padding: 0 16px 14px;
+    color: #64748b;
+    font-size: 0.85rem;
+  }
+}
+
+.logro-card-top {
+  height: 52px;
+  background:
+    linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(59, 130, 246, 0.10)),
+    radial-gradient(circle at 85% 20%, rgba(37, 99, 235, 0.14), transparent 55%);
+  border-bottom: 1px solid #e7eef8;
+}
+
+.logro-icon {
+  font-size: 2.4rem;
+  display: block;
+  margin-bottom: 12px;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+
+.logro-card--locked {
+  opacity: 0.45;
+  filter: grayscale(1);
+
+  .logro-card-top {
+    background: linear-gradient(135deg, rgba(100, 116, 139, 0.1), rgba(148, 163, 184, 0.08));
+    border-bottom: 1px solid #e2e8f0;
+  }
+}
+
+.logro-fecha {
+  padding: 0 16px 14px !important;
+  font-size: 0.78rem !important;
+  color: #10b981 !important;
+  font-weight: 500;
+}
+
+.logro-bloqueado {
+  padding: 0 16px 14px !important;
+  font-size: 0.78rem !important;
+  color: #94a3b8 !important;
+  font-style: italic;
+}
+
+.logros-status {
+  padding: 24px 0;
+  color: #64748b;
+  font-size: 0.9rem;
+
+  &--error {
+    color: #ef4444;
+  }
+}

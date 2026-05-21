@@ -1,0 +1,16 @@
+﻿<section class="create-post-card">
+  <textarea
+    placeholder="Comparte tu conocimiento..."
+    [(ngModel)]="draftContent"
+  ></textarea>
+  <!-- El botón navega a la ruta hija /home/create-post y reemplaza la vista del main para crear publicación.
+  Pasamos el contenido del textarea como query param 
+  para prellenar el formulario de creación de post. -->
+  <button
+    type="button"
+    routerLink="create-post"
+    [queryParams]="{ content: draftContent }"
+  >
+    Crear publicación
+  </button>
+</section>

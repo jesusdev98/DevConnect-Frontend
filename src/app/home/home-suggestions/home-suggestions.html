@@ -1,0 +1,73 @@
+<section class="suggestions-page">
+  <!-- Short header that explains the purpose of the form -->
+  <header class="suggestions-hero">
+    <span class="suggestions-kicker">Canal interno</span>
+    <h1>Enviar sugerencia</h1>
+    <p>¿Tienes una idea o algo que mejorar? Cuéntanoslo en unos segundos.</p>
+  </header>
+
+  <!-- Lightweight success state shown after the mail client opens -->
+  <div class="suggestions-feedback" *ngIf="submitted">
+    <strong>Sugerencia enviada</strong>
+    <span>Gracias, lo revisaremos.</span>
+  </div>
+
+  <form class="suggestions-card" [formGroup]="form" (ngSubmit)="sendSuggestion()" novalidate>
+    <!-- Quick chips so the user classifies the message without a dropdown -->
+    <section class="chip-group" aria-label="Tipo de sugerencia">
+      <div class="chip-group__header">
+        <span>¿Qué quieres compartir?</span>
+      </div>
+
+      <div class="chip-row">
+        <button
+          *ngFor="let type of suggestionTypes"
+          type="button"
+          class="chip-button"
+          [class.is-active]="selectedType === type"
+          (click)="selectType(type)"
+        >
+          {{ type }}
+        </button>
+      </div>
+    </section>
+
+    <!-- Keep the form short: one concise summary and one longer message -->
+    <label class="field">
+      <span>Resume tu idea en una frase</span>
+      <input
+        type="text"
+        formControlName="subject"
+        placeholder="Ej: Mejorar el filtro de tags"
+        autocomplete="off"
+      />
+      <small class="field-error" *ngIf="form.get('subject')?.touched && form.get('subject')?.hasError('required')">
+        El asunto es obligatorio.
+      </small>
+      <small class="field-error" *ngIf="form.get('subject')?.touched && form.get('subject')?.hasError('minlength')">
+        Mínimo 4 caracteres.
+      </small>
+    </label>
+
+    <label class="field field-message">
+      <span>Cuéntanos un poco más</span>
+      <textarea
+        formControlName="message"
+        placeholder="¿Qué problema has tenido o qué mejorarías?"
+      ></textarea>
+      <small class="field-error" *ngIf="form.get('message')?.touched && form.get('message')?.hasError('required')">
+        El mensaje es obligatorio.
+      </small>
+      <small class="field-error" *ngIf="form.get('message')?.touched && form.get('message')?.hasError('minlength')">
+        Mínimo 20 caracteres.
+      </small>
+      <small class="field-hint">Opcional. Si añades contexto, nos ayudas a entenderlo mejor.</small>
+    </label>
+
+    <!-- Primary action stays prominent; reset stays secondary -->
+    <div class="suggestions-actions">
+      <button type="submit" class="primary-action" [disabled]="form.invalid">Enviar</button>
+      <button type="button" class="secondary-action" (click)="resetForm()">Limpiar</button>
+    </div>
+  </form>
+</section>
