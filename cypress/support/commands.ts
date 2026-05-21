@@ -127,9 +127,12 @@ Cypress.Commands.add('seedAdminUser', (): Cypress.Chainable<void> => {
     return cy.wrap(null, { log: false }).then(() => undefined);
   }
 
-  return cy.exec(command, { failOnNonZeroExit: true }).then((result) => {
-    expect(result.code ?? 0).to.eq(0);
-  }).then(() => undefined);
+  return cy
+    .exec(command, { failOnNonZeroExit: true })
+    .then((result) => {
+      expect(result.code ?? 0).to.eq(0);
+    })
+    .then(() => undefined);
 });
 
 /**
@@ -140,7 +143,9 @@ const logInterceptResult = (alias: string, interception: any): Cypress.Chainable
   const responseStatus = interception.response?.statusCode ?? 'NO_RESPONSE';
 
   return cy
-    .task('log', `[${alias}] ${interception.request.method} ${requestUrl} -> ${responseStatus}`, { log: false })
+    .task('log', `[${alias}] ${interception.request.method} ${requestUrl} -> ${responseStatus}`, {
+      log: false,
+    })
     .then(() => undefined);
 };
 
@@ -148,9 +153,11 @@ const logInterceptResult = (alias: string, interception: any): Cypress.Chainable
  * Records the current SPA pathname before and after auth form submissions.
  */
 const logPathname = (label: string): Cypress.Chainable<void> => {
-  return cy.location('pathname').then((path) =>
-    cy.task('log', `[${label}] pathname=${path}`, { log: false }).then(() => undefined),
-  );
+  return cy
+    .location('pathname')
+    .then((path) =>
+      cy.task('log', `[${label}] pathname=${path}`, { log: false }).then(() => undefined),
+    );
 };
 
 /**
@@ -221,9 +228,7 @@ const getCsrfContext = (): Cypress.Chainable<CsrfContext> => {
           ? [rawSetCookies]
           : [];
 
-      const cookieHeader = setCookies
-        .map((cookie) => cookie.split(';')[0])
-        .join('; ');
+      const cookieHeader = setCookies.map((cookie) => cookie.split(';')[0]).join('; ');
 
       const xsrfCookie = setCookies.find((cookie) => cookie.startsWith('XSRF-TOKEN='));
 
@@ -261,30 +266,39 @@ const resolveUsername = (payload: RegisterPayload): string => {
 Cypress.Commands.add('routeLaravelBrowserTraffic', (): Cypress.Chainable<void> => {
   const browserBackendUrl = resolveBrowserBackendUrl();
   const apiBackendUrl = resolveApiBackendUrl();
-  const browserBackendHost = new URL(browserBackendUrl).host;
+  const browserBackendOrigin = new URL(browserBackendUrl).origin;
+  const apiBackendOrigin = new URL(apiBackendUrl).origin;
+  const apiBackendHost = new URL(apiBackendUrl).host;
 
-  ['/api/**', '/sanctum/**'].forEach((pathPattern) => {
-    cy.intercept({ url: `${browserBackendUrl}${pathPattern}`, middleware: true }, (req) => {
-      const originalUrl = req.url;
-      const rewrittenUrl = originalUrl.replace(browserBackendUrl, apiBackendUrl);
-      const alias = resolveBrowserAuthAlias(req.method, originalUrl);
+  cy.intercept({ url: `${browserBackendOrigin}/**`, middleware: true }, (req) => {
+    const originalUrl = new URL(req.url);
+    const shouldForwardToLaravel =
+      originalUrl.origin === browserBackendOrigin &&
+      (originalUrl.pathname.startsWith('/api/') || originalUrl.pathname.startsWith('/sanctum/'));
 
-      if (alias) {
-        req.alias = alias;
-      }
-
-      req.url = rewrittenUrl;
-      req.headers.host = browserBackendHost;
-
-      req.on('before:response', (res) => {
-        Cypress.log({
-          name: 'laravel-proxy',
-          message: `${req.method} ${originalUrl} -> ${rewrittenUrl} (${res.statusCode})${alias ? ` alias=@${alias}` : ''}`,
-        });
-      });
-
+    if (!shouldForwardToLaravel) {
       req.continue();
+      return;
+    }
+
+    const rewrittenUrl = `${apiBackendOrigin}${originalUrl.pathname}${originalUrl.search}`;
+    const alias = resolveBrowserAuthAlias(req.method, req.url);
+
+    if (alias) {
+      req.alias = alias;
+    }
+
+    req.url = rewrittenUrl;
+    req.headers.host = apiBackendHost;
+
+    req.on('before:response', (res) => {
+      Cypress.log({
+        name: 'laravel-proxy',
+        message: `${req.method} ${originalUrl.href} -> ${rewrittenUrl} (${res.statusCode})${alias ? ` alias=@${alias}` : ''}`,
+      });
     });
+
+    req.continue();
   });
 
   return cy.wrap(null, { log: false }).then(() => undefined);
@@ -344,33 +358,42 @@ Cypress.Commands.add('visitProtectedRoute', (path: string): Cypress.Chainable<vo
  * Registro usando UI (flujo e2e real). Cuando Angular debe bloquear el submit
  * en cliente, el spec puede pasar expectRequest=false para no esperar red.
  */
-Cypress.Commands.add('registerByUI', (payload: RegisterPayload, options?: UiSubmitOptions): Cypress.Chainable<void> => {
-  const username = resolveUsername(payload);
-  const expectRequest = options?.expectRequest ?? true;
-  const browserBackendUrl = resolveBrowserBackendUrl();
+Cypress.Commands.add(
+  'registerByUI',
+  (payload: RegisterPayload, options?: UiSubmitOptions): Cypress.Chainable<void> => {
+    const username = resolveUsername(payload);
+    const expectRequest = options?.expectRequest ?? true;
+    const browserBackendUrl = resolveBrowserBackendUrl();
 
-  cy.task('log', `[${AUTH_CSRF_ALIAS} matcher] GET ${browserBackendUrl}${CSRF_ROUTE_PATH}`, { log: false });
-  cy.task('log', `[${AUTH_REGISTER_ALIAS} matcher] POST ${browserBackendUrl}${REGISTER_ROUTE_PATH}`, { log: false });
-  logPathname('register:before-submit');
-  cy.get('[data-cy=register-nombre]').clear().type(payload.nombre);
-  cy.get('[data-cy=register-apellidos]').clear().type(payload.apellidos);
-  cy.get('[data-cy=register-usuario]').clear().type(username);
-  cy.get('[data-cy=register-email]').clear().type(payload.email);
-  cy.get('[data-cy=register-password]').clear().type(payload.password);
-  cy.get('[data-cy=register-password-confirm]').clear().type(payload.passwordConfirmation);
-  cy.get('[data-cy=register-submit]').should('have.attr', 'type', 'submit').click();
+    cy.task('log', `[${AUTH_CSRF_ALIAS} matcher] GET ${browserBackendUrl}${CSRF_ROUTE_PATH}`, {
+      log: false,
+    });
+    cy.task(
+      'log',
+      `[${AUTH_REGISTER_ALIAS} matcher] POST ${browserBackendUrl}${REGISTER_ROUTE_PATH}`,
+      { log: false },
+    );
+    logPathname('register:before-submit');
+    cy.get('[data-cy=register-nombre]').clear().type(payload.nombre);
+    cy.get('[data-cy=register-apellidos]').clear().type(payload.apellidos);
+    cy.get('[data-cy=register-usuario]').clear().type(username);
+    cy.get('[data-cy=register-email]').clear().type(payload.email);
+    cy.get('[data-cy=register-password]').clear().type(payload.password);
+    cy.get('[data-cy=register-password-confirm]').clear().type(payload.passwordConfirmation);
+    cy.get('[data-cy=register-submit]').should('have.attr', 'type', 'submit').click();
 
-  if (!expectRequest) {
-    return logPathname('register:after-submit');
-  }
+    if (!expectRequest) {
+      return logPathname('register:after-submit');
+    }
 
-  return cy
-    .wait(`@${AUTH_CSRF_ALIAS}`, { timeout: UI_REQUEST_TIMEOUT })
-    .then((interception) => logInterceptResult(AUTH_CSRF_ALIAS, interception))
-    .then(() => cy.wait(`@${AUTH_REGISTER_ALIAS}`, { timeout: UI_REQUEST_TIMEOUT }))
-    .then((interception) => logInterceptResult(AUTH_REGISTER_ALIAS, interception))
-    .then(() => logPathname('register:after-submit'));
-});
+    return cy
+      .wait(`@${AUTH_CSRF_ALIAS}`, { timeout: UI_REQUEST_TIMEOUT })
+      .then((interception) => logInterceptResult(AUTH_CSRF_ALIAS, interception))
+      .then(() => cy.wait(`@${AUTH_REGISTER_ALIAS}`, { timeout: UI_REQUEST_TIMEOUT }))
+      .then((interception) => logInterceptResult(AUTH_REGISTER_ALIAS, interception))
+      .then(() => logPathname('register:after-submit'));
+  },
+);
 
 /**
  * Registro por API para datos semilla de tests e2e.
@@ -397,63 +420,79 @@ Cypress.Commands.add('registerByAPI', (payload: RegisterPayload): Cypress.Chaina
  * Login por UI. Cuando Angular debe bloquear el submit en cliente, el spec
  * puede pasar expectRequest=false para no esperar una request inexistente.
  */
-Cypress.Commands.add('loginByUI', (payload: LoginPayload, options?: UiSubmitOptions): Cypress.Chainable<void> => {
-  const expectRequest = options?.expectRequest ?? true;
-  const browserBackendUrl = resolveBrowserBackendUrl();
+Cypress.Commands.add(
+  'loginByUI',
+  (payload: LoginPayload, options?: UiSubmitOptions): Cypress.Chainable<void> => {
+    const expectRequest = options?.expectRequest ?? true;
+    const browserBackendUrl = resolveBrowserBackendUrl();
 
-  cy.task('log', `[${AUTH_CSRF_ALIAS} matcher] GET ${browserBackendUrl}${CSRF_ROUTE_PATH}`, { log: false });
-  cy.task('log', `[${AUTH_LOGIN_ALIAS} matcher] POST ${browserBackendUrl}${LOGIN_ROUTE_PATH}`, { log: false });
-  logPathname('login:before-submit');
-  cy.get('[data-cy=login-identifier]').clear().type(payload.identifier);
-  cy.get('[data-cy=login-password]').clear().type(payload.password);
-  cy.get('[data-cy=login-submit]').should('have.attr', 'type', 'submit').click();
+    cy.task('log', `[${AUTH_CSRF_ALIAS} matcher] GET ${browserBackendUrl}${CSRF_ROUTE_PATH}`, {
+      log: false,
+    });
+    cy.task('log', `[${AUTH_LOGIN_ALIAS} matcher] POST ${browserBackendUrl}${LOGIN_ROUTE_PATH}`, {
+      log: false,
+    });
+    logPathname('login:before-submit');
+    cy.get('[data-cy=login-identifier]').clear().type(payload.identifier);
+    cy.get('[data-cy=login-password]').clear().type(payload.password);
+    cy.get('[data-cy=login-submit]').should('have.attr', 'type', 'submit').click();
 
-  if (!expectRequest) {
-    return logPathname('login:after-submit');
-  }
+    if (!expectRequest) {
+      return logPathname('login:after-submit');
+    }
 
-  return cy
-    .wait(`@${AUTH_CSRF_ALIAS}`, { timeout: UI_REQUEST_TIMEOUT })
-    .then((interception) => logInterceptResult(AUTH_CSRF_ALIAS, interception))
-    .then(() => cy.wait(`@${AUTH_LOGIN_ALIAS}`, { timeout: UI_REQUEST_TIMEOUT }))
-    .then((interception) => logInterceptResult(AUTH_LOGIN_ALIAS, interception))
-    .then(() => logPathname('login:after-submit'));
-});
+    return cy
+      .wait(`@${AUTH_CSRF_ALIAS}`, { timeout: UI_REQUEST_TIMEOUT })
+      .then((interception) => logInterceptResult(AUTH_CSRF_ALIAS, interception))
+      .then(() => cy.wait(`@${AUTH_LOGIN_ALIAS}`, { timeout: UI_REQUEST_TIMEOUT }))
+      .then((interception) => logInterceptResult(AUTH_LOGIN_ALIAS, interception))
+      .then(() => logPathname('login:after-submit'));
+  },
+);
 
 /**
  * Login por API para preparar estado de sesion cuando convenga.
  */
 Cypress.Commands.add('loginByAPI', (payload: LoginPayload): Cypress.Chainable<any> => {
-  return cy.csrfRequest({
-    method: 'POST',
-    url: `${resolveApiBackendUrl()}/api/auth/login`,
-    withCredentials: true,
-    body: {
-      identifier: payload.identifier,
-      password: payload.password,
-    },
-  }).then((response) => {
-    expect(response.status).to.eq(200);
-    return response;
-  });
+  return cy
+    .csrfRequest({
+      method: 'POST',
+      url: `${resolveApiBackendUrl()}/api/auth/login`,
+      withCredentials: true,
+      body: {
+        identifier: payload.identifier,
+        password: payload.password,
+      },
+    })
+    .then((response) => {
+      expect(response.status).to.eq(200);
+      return response;
+    });
 });
 
 /**
  * Asercion util para mensajes de error de login.
  */
-Cypress.Commands.add('assertLoginErrorMessage', (message: string): Cypress.Chainable<JQuery<HTMLElement>> => {
-  return cy.get('[data-cy=login-error-message]', { timeout: 10000 }).should('be.visible').and('contain.text', message);
-});
+Cypress.Commands.add(
+  'assertLoginErrorMessage',
+  (message: string): Cypress.Chainable<JQuery<HTMLElement>> => {
+    return cy
+      .get('[data-cy=login-error-message]', { timeout: 10000 })
+      .should('be.visible')
+      .and('contain.text', message);
+  },
+);
 
 /**
  * Cierra sesion contra API real para validar invalidacion.
  */
 Cypress.Commands.add('apiLogout', (): Cypress.Chainable<void> => {
-  return cy.csrfRequest({
-    method: 'POST',
-    url: `${resolveApiBackendUrl()}/api/auth/logout`,
-    failOnStatusCode: false,
-  })
+  return cy
+    .csrfRequest({
+      method: 'POST',
+      url: `${resolveApiBackendUrl()}/api/auth/logout`,
+      failOnStatusCode: false,
+    })
     .then((response) => {
       expect(response.status, 'api logout status').to.be.oneOf(ACCEPTED_LOGOUT_STATUSES);
     })
@@ -483,9 +522,7 @@ Cypress.Commands.add('createPostByUI', (payload: CreatePostUiPayload): Cypress.C
       .check({ force: true });
   }
 
-  cy.get('section.create-post-page')
-    .contains('button[type="submit"]', 'Publicar')
-    .click();
+  cy.get('section.create-post-page').contains('button[type="submit"]', 'Publicar').click();
 
   return cy.wrap(null, { log: false }).then(() => undefined);
 });
@@ -493,20 +530,23 @@ Cypress.Commands.add('createPostByUI', (payload: CreatePostUiPayload): Cypress.C
 /**
  * Espera el bootstrap común de specs de posts mockeados.
  */
-Cypress.Commands.add('waitForPostsBootstrap', (options?: PostsBootstrapWaitOptions): Cypress.Chainable<void> => {
-  const shouldWaitPosts = options?.waitPosts ?? false;
-  const postsAlias = options?.postsAlias ?? '@getPosts';
+Cypress.Commands.add(
+  'waitForPostsBootstrap',
+  (options?: PostsBootstrapWaitOptions): Cypress.Chainable<void> => {
+    const shouldWaitPosts = options?.waitPosts ?? false;
+    const postsAlias = options?.postsAlias ?? '@getPosts';
 
-  // Home debe quedar hidratado antes de interactuar con el feed o el aside.
-  cy.wait('@authMe');
-  cy.wait('@tagCategories');
-  cy.wait('@users');
-  cy.wait('@homeSidebar');
-  if (shouldWaitPosts) {
-    cy.wait(postsAlias);
-  }
+    // Home debe quedar hidratado antes de interactuar con el feed o el aside.
+    cy.wait('@authMe');
+    cy.wait('@tagCategories');
+    cy.wait('@users');
+    cy.wait('@homeSidebar');
+    if (shouldWaitPosts) {
+      cy.wait(postsAlias);
+    }
 
-  return cy.wrap(null, { log: false }).then(() => undefined);
-});
+    return cy.wrap(null, { log: false }).then(() => undefined);
+  },
+);
 
 export {};
