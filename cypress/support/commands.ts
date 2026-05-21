@@ -24,7 +24,6 @@ const PROFILE_ROUTE_PATH = '/api/auth/me/profile';
 const CHANGE_PASSWORD_ROUTE_PATH = '/api/auth/change-password';
 const CSRF_ROUTE_PATH = '/sanctum/csrf-cookie';
 const UI_REQUEST_TIMEOUT = 15000;
-const WINDOWS_BACKEND_ARTISAN_PREFIX = 'cmd /c "cd /d ..\\backend && ';
 
 type CsrfRequestOptions = {
   method: string;
@@ -75,6 +74,7 @@ declare global {
       registerByUI(payload: RegisterPayload, options?: UiSubmitOptions): Chainable<void>;
       registerByAPI(payload: RegisterPayload): Chainable<any>;
       loginByAPI(payload: LoginPayload): Chainable<any>;
+      seedAdminUser(): Chainable<void>;
       assertLoginErrorMessage(message: string): Chainable<JQuery<HTMLElement>>;
       apiLogout(): Chainable<void>;
       routeLaravelBrowserTraffic(): Chainable<void>;
@@ -90,26 +90,17 @@ type CsrfContext = {
   xsrfToken: string;
 };
 
-const resolveExecCommand = (command: string): string => {
-  if (Cypress.platform === 'win32' || !command.startsWith(WINDOWS_BACKEND_ARTISAN_PREFIX) || !command.endsWith('"')) {
-    return command;
-  }
-
-  const artisanCommand = command.slice(WINDOWS_BACKEND_ARTISAN_PREFIX.length, -1);
-
-  return `sh -c 'if [ -d ../backend ]; then cd ../backend && ${artisanCommand}; else echo "Backend source not mounted; backend container is seeded at startup."; fi'`;
-};
-
-Cypress.Commands.overwrite('exec', (originalFn, command, options) => {
-  return originalFn(resolveExecCommand(command), options);
-});
-
 const resolveFrontendBaseUrl = (): string => Cypress.config('baseUrl') ?? DEFAULT_FRONTEND_URL;
 
 /**
  * Derives the backend origin used by the browser during real SPA requests.
  */
 const resolveBrowserBackendUrl = (): string => {
+  const configuredBrowserBackendUrl = Cypress.env('browserBackendUrl');
+  if (typeof configuredBrowserBackendUrl === 'string' && configuredBrowserBackendUrl.length > 0) {
+    return configuredBrowserBackendUrl;
+  }
+
   const frontendUrl = new URL(resolveFrontendBaseUrl());
   return `${frontendUrl.protocol}//${frontendUrl.hostname}:8001`;
 };
@@ -123,6 +114,24 @@ const resolveApiBackendUrl = (): string => {
     ? configuredBackendUrl
     : DEFAULT_API_BACKEND_URL;
 };
+
+const resolveAdminSeedCommand = (): string => {
+  const configuredCommand = Cypress.env('adminSeedCommand');
+  return typeof configuredCommand === 'string' ? configuredCommand.trim() : '';
+};
+
+Cypress.Commands.add('seedAdminUser', (): Cypress.Chainable<void> => {
+  const command = resolveAdminSeedCommand();
+
+  if (!command) {
+    cy.log('Admin seed command not configured; assuming the backend test user already exists.');
+    return cy.wrap(null, { log: false }).then(() => undefined);
+  }
+
+  return cy.exec(command, { failOnNonZeroExit: true }).then((result) => {
+    expect(result.code ?? 0).to.eq(0);
+  }).then(() => undefined);
+});
 
 /**
  * Emits compact network diagnostics for auth aliases when E2E waits complete.

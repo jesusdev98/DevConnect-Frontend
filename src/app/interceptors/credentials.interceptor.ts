@@ -26,8 +26,7 @@ export class CredentialsInterceptor implements HttpInterceptor {
    * @returns Observable for the eventual HTTP event stream.
    */
   intercept(req: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
-    // Solo aplicamos credenciales/CSRF para requests al backend Laravel.
-    if (!req.url.startsWith(environment.apiUrl)) {
+    if (!this.targetsBackend(req.url)) {
       return next.handle(req);
     }
 
@@ -45,6 +44,34 @@ export class CredentialsInterceptor implements HttpInterceptor {
     });
 
     return next.handle(credentialsReq);
+  }
+
+  /**
+   * Matches only the configured backend origin/path or explicit same-origin
+   * Laravel paths. String-prefix matching is intentionally avoided so
+   * similarly named third-party hosts cannot receive credentials.
+   */
+  private targetsBackend(requestUrl: string): boolean {
+    if (requestUrl.startsWith('/api/') || requestUrl.startsWith('/sanctum/')) {
+      return true;
+    }
+
+    if (!environment.apiUrl || typeof window === 'undefined') {
+      return false;
+    }
+
+    try {
+      const request = new URL(requestUrl, window.location.origin);
+      const api = new URL(environment.apiUrl, window.location.origin);
+      const apiPath = api.pathname === '/' ? '/' : api.pathname.replace(/\/$/, '');
+      const targetsApiPath = apiPath === '/'
+        || request.pathname === apiPath
+        || request.pathname.startsWith(`${apiPath}/`);
+
+      return request.origin === api.origin && targetsApiPath;
+    } catch {
+      return false;
+    }
   }
 
   /**

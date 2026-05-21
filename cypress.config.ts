@@ -2,11 +2,13 @@ import { defineConfig } from 'cypress';
 
 export default defineConfig({
   e2e: {
-    // Cypress keeps the Angular SPA on 127.0.0.1 while backend requests are
-    // rewritten separately to the Laravel listener configured in env.backendUrl.
+    // Cypress keeps the Angular SPA local while backend requests are rewritten
+    // separately to the Laravel listener configured in env.backendUrl.
     baseUrl: 'http://127.0.0.1:4200',
     env: {
       backendUrl: 'http://127.0.0.1:8001',
+      browserBackendUrl: '',
+      adminSeedCommand: '',
     },
     specPattern: 'cypress/e2e/**/*.cy.{js,ts}',
     supportFile: 'cypress/support/e2e.ts',

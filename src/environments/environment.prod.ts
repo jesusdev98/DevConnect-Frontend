@@ -1,5 +1,7 @@
+import { resolveApiUrl } from '../app/config/runtime-config';
+
 export const environment = {
   production: true,
-  apiUrl: 'https://api.example.com',
+  apiUrl: resolveApiUrl('/'),
   adminEmail: 'contact@example.com',
 };

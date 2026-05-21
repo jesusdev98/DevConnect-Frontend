@@ -10,6 +10,7 @@ import { Post, PostService } from '../services/post-service';
 import { ProfileLink, ProfileLinkService } from '../services/profile-link.service';
 import { UiFeedbackService } from '../services/ui-feedback.service';
 import { PublicProfile, UpdateProfilePayload, UserService } from '../services/user.service';
+import { environment } from '../../environments/environment';
 
 @Component({
   selector: 'app-profile',
@@ -240,7 +241,7 @@ export class Profile implements OnDestroy, AfterViewInit {
   ngAfterViewInit(): void {
     const self = this;
 
-    if (typeof window !== 'undefined' && 'Cypress' in window) {
+    if (!environment.production && typeof window !== 'undefined' && 'Cypress' in window) {
       (window as Window & { __DEVCONNECT_DELETE_ME__?: () => void }).__DEVCONNECT_DELETE_ME__ = function () {
         return self.onDeleteAccount();
       };

@@ -29,11 +29,18 @@ describe('E2E - Profile Admin Delete', () => {
   };
 
   const seedAdminUser = () => {
-    return cy.exec('cmd /c "cd /d ..\\backend && php artisan db:seed --class=AdminUserSeeder --no-interaction"', {
-      failOnNonZeroExit: true,
-    }).then((result) => {
-      expect(result.code ?? 0).to.eq(0);
-    });
+    return cy.seedAdminUser();
+  };
+
+  const resolveBrowserBackendUrl = () => {
+    const configuredBrowserBackendUrl = Cypress.env('browserBackendUrl');
+    if (typeof configuredBrowserBackendUrl === 'string' && configuredBrowserBackendUrl.length > 0) {
+      return configuredBrowserBackendUrl;
+    }
+
+    const frontendBaseUrl = Cypress.config('baseUrl') ?? 'http://127.0.0.1:4200';
+    const frontendUrl = new URL(frontendBaseUrl);
+    return `${frontendUrl.protocol}//${frontendUrl.hostname}:8001`;
   };
 
   const loginAsAdmin = () => {
@@ -47,7 +54,7 @@ describe('E2E - Profile Admin Delete', () => {
   const confirmAdminCanSearchUser = (username: string) => {
     return cy.window().then((win) => {
       return win
-        .fetch(`http://127.0.0.1:8001/api/users?search=${encodeURIComponent(username)}`, {
+        .fetch(`${resolveBrowserBackendUrl()}/api/users?search=${encodeURIComponent(username)}`, {
           credentials: 'include',
           headers: {
             Accept: 'application/json',
@@ -69,7 +76,7 @@ describe('E2E - Profile Admin Delete', () => {
   const confirmAdminCannotSearchUser = (username: string) => {
     return cy.window().then((win) => {
       return win
-        .fetch(`http://127.0.0.1:8001/api/users?search=${encodeURIComponent(username)}`, {
+        .fetch(`${resolveBrowserBackendUrl()}/api/users?search=${encodeURIComponent(username)}`, {
           credentials: 'include',
           headers: {
             Accept: 'application/json',

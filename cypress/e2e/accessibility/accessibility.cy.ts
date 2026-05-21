@@ -1,4 +1,8 @@
-import type { Result, RunOptions } from 'axe-core';
+import type { ImpactValue, Result, RunOptions } from 'axe-core';
+
+type CypressAxeRunOptions = RunOptions & {
+  includedImpacts?: ImpactValue[];
+};
 
 // ── Credenciales del usuario de prueba ──────────────────────────────────────
 // Se generan una sola vez al cargar el módulo para que el before/session
@@ -11,7 +15,7 @@ const TEST_USERNAME = `a11y_${SUFFIX}`;
 // ── Configuración de axe ────────────────────────────────────────────────────
 // Solo WCAG 2.1 Nivel A y AA. Solo impactos critical/serious para evitar
 // ruido en primera ejecución. Ampliar a 'moderate' cuando el equipo esté listo.
-const AXE_WCAG_AA: RunOptions = {
+const AXE_WCAG_AA: CypressAxeRunOptions = {
   runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa'] },
   includedImpacts: ['critical', 'serious'],
 };

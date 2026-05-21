@@ -14,6 +14,11 @@
 describe('E2E - Autenticacion y autorizacion', () => {
   const frontendBaseUrl = Cypress.config('baseUrl') ?? 'http://127.0.0.1:4200';
   const browserBackend = (() => {
+    const configuredBrowserBackendUrl = Cypress.env('browserBackendUrl');
+    if (typeof configuredBrowserBackendUrl === 'string' && configuredBrowserBackendUrl.length > 0) {
+      return configuredBrowserBackendUrl;
+    }
+
     const frontendUrl = new URL(frontendBaseUrl);
     return `${frontendUrl.protocol}//${frontendUrl.hostname}:8001`;
   })();
@@ -100,11 +105,7 @@ describe('E2E - Autenticacion y autorizacion', () => {
 
   // Seeds the privileged account used by admin-only authorization scenarios.
   const seedAdminUser = () => {
-    return cy.exec('cmd /c "cd /d ..\\backend && php artisan db:seed --class=AdminUserSeeder --no-interaction"', {
-      failOnNonZeroExit: true,
-    }).then((result) => {
-      expect(result.code ?? 0).to.eq(0);
-    });
+    return cy.seedAdminUser();
   };
 
   // Accesses the interception history behind a given alias for duplicate-submit

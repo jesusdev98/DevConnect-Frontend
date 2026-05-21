@@ -89,7 +89,7 @@
         <ng-container *ngIf="editingLink !== link.type; else editLinkRow">
           <span>{{ link.icon }}</span>
           <span class="link-label">{{ link.label }}:</span>
-          <a *ngIf="link.url" [href]="link.url" target="_blank" rel="noopener" class="link-anchor">{{ link.url }}</a>
+          <a *ngIf="link.url" [href]="link.url" target="_blank" rel="noopener noreferrer" class="link-anchor">{{ link.url }}</a>
           <span *ngIf="!link.url" class="link-empty-state">No añadido</span>
           <button
             type="button"

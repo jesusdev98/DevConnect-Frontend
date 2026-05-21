@@ -48,6 +48,20 @@ export class ProfileLinkService {
   }
 
   private normalizeUrl(value: string | null | undefined): string {
-    return typeof value === 'string' ? value.trim() : '';
+    if (typeof value !== 'string') {
+      return '';
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return '';
+    }
+
+    try {
+      const url = new URL(trimmed);
+      return url.protocol === 'https:' || url.protocol === 'http:' ? url.toString() : '';
+    } catch {
+      return '';
+    }
   }
 }

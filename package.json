@@ -1,5 +1,5 @@
 {
-  "name": "frontend",
+  "name": "devconnect-frontend",
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
@@ -10,7 +10,8 @@
     "test": "ng test",
     "cypress:open": "cypress open",
     "cypress:run": "cypress run",
-    "e2e": "wait-on http://127.0.0.1:4200 http://127.0.0.1:8001 && cypress run"
+    "e2e": "wait-on http://127.0.0.1:4200 && cypress run",
+    "e2e:local": "wait-on http://127.0.0.1:4200 http://127.0.0.1:8001 && cypress run"
   },
   "private": true,
   "packageManager": "pnpm@11.1.3",

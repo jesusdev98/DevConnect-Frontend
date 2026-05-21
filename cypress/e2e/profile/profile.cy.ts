@@ -34,11 +34,7 @@ describe('E2E - Profile', () => {
   };
 
   const seedAdminUser = () => {
-    return cy.exec('cmd /c "cd /d ..\\backend && php artisan db:seed --class=AdminUserSeeder --no-interaction"', {
-      failOnNonZeroExit: true,
-    }).then((result) => {
-      expect(result.code ?? 0).to.eq(0);
-    });
+    return cy.seedAdminUser();
   };
 
   beforeEach(() => {

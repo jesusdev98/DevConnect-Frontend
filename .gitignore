@@ -53,6 +53,12 @@ logs/
 
 # Environment files with secrets should stay local.
 # The committed Angular environment files contain no secrets.
+.env
+.env.local
+.env.*.local
+
+# Deployment
+.vercel/
 
 # System files
 .DS_Store

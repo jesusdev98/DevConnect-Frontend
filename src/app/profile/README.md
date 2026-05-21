@@ -37,7 +37,7 @@ The profile module separates container state from tab-level presentation.
 
 This keeps profile tabs isolated without changing the routed surface.
 
-## Related Docs
+## Related Coverage
 
-- [Gamification](../../../../docs/GAMIFICATION.md)
-- [Cypress E2E](../../../../docs/CYPRESS_E2E.md)
+- Profile specs: `cypress/e2e/profile/profile.cy.ts`
+- Admin profile specs: `cypress/e2e/profile/admin.cy.ts`
