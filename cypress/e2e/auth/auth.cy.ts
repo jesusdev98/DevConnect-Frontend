@@ -802,6 +802,7 @@ describe('E2E - Autenticacion y autorizacion', () => {
       identifier: user.usuario,
       password: user.password,
     });
+    assertHomeLoaded();
 
     fetchAdminPing().then(({ status, body }) => {
       expect(status).to.eq(403);
@@ -814,6 +815,7 @@ describe('E2E - Autenticacion y autorizacion', () => {
 
     cy.visit('/login');
     cy.adminCredentials().then((credentials) => cy.loginByUI(credentials));
+    assertHomeLoaded();
 
     fetchAdminPing().then(({ status, body }) => {
       expect(status).to.eq(200);
@@ -827,6 +829,7 @@ describe('E2E - Autenticacion y autorizacion', () => {
 
     cy.visit('/login');
     cy.adminCredentials().then((credentials) => cy.loginByUI(credentials));
+    assertHomeLoaded();
 
     fetchAdminPing().then(({ status }) => {
       expect(status).to.eq(200);

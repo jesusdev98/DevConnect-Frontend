@@ -2,14 +2,28 @@ import { buildE2ECredentials } from '../../builders/UserBuilder';
 
 type Credentials = ReturnType<typeof buildE2ECredentials>;
 
+type CreatedPost = {
+  id: number;
+};
+
 describe('E2E - Comments (real flow)', () => {
-  // Dependency note: this spec targets a real post id expected in local env.
-  const REAL_POST_ID = 12;
   let uniqueUserSeed = 0;
+
+  const resolveBrowserBackendUrl = () => {
+    const configuredBrowserBackendUrl = Cypress.env('browserBackendUrl');
+    if (typeof configuredBrowserBackendUrl === 'string' && configuredBrowserBackendUrl.length > 0) {
+      return configuredBrowserBackendUrl;
+    }
+
+    return Cypress.config('baseUrl') ?? 'http://127.0.0.1:4200';
+  };
 
   const buildUniqueUser = (prefix: string): Credentials => {
     const user = buildE2ECredentials(prefix);
-    const normalizedPrefix = prefix.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8).toLowerCase();
+    const normalizedPrefix = prefix
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .slice(0, 8)
+      .toLowerCase();
     const token = `${Date.now().toString().slice(-6)}${(uniqueUserSeed++).toString().padStart(2, '0')}`;
     const username = `${normalizedPrefix}_${token}`;
 
@@ -21,10 +35,13 @@ describe('E2E - Comments (real flow)', () => {
   };
 
   const registerTestUser = (user: Credentials) => {
-    return cy.registerByAPI({
-      ...user,
-      passwordConfirmation: user.passwordConfirmation,
-    }).its('status').should('eq', 201);
+    return cy
+      .registerByAPI({
+        ...user,
+        passwordConfirmation: user.passwordConfirmation,
+      })
+      .its('status')
+      .should('eq', 201);
   };
 
   const loginAsUser = (user: { usuario: string; password: string }) => {
@@ -36,17 +53,60 @@ describe('E2E - Comments (real flow)', () => {
     cy.url({ timeout: 15000 }).should('include', '/home');
   };
 
-  const goToRealPostDetail = () => {
-    cy.visit(`/home/post/${REAL_POST_ID}`);
-    cy.url({ timeout: 15000 }).should('include', `/home/post/${REAL_POST_ID}`);
+  const createPostFromBrowserSession = (): Cypress.Chainable<CreatedPost> => {
+    const title = `Post comentarios Cypress ${Date.now()}`;
+    const content = `Contenido estable para pruebas de comentarios Cypress ${Date.now()}.`;
+
+    return cy.window().then((win) => {
+      const xsrfCookie = win.document.cookie
+        .split('; ')
+        .find((cookie) => cookie.startsWith('XSRF-TOKEN='));
+
+      if (!xsrfCookie) {
+        throw new Error('Missing XSRF-TOKEN cookie before creating comment test post.');
+      }
+
+      const xsrfToken = decodeURIComponent(xsrfCookie.slice('XSRF-TOKEN='.length));
+
+      return win
+        .fetch(`${resolveBrowserBackendUrl()}/api/posts`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-XSRF-TOKEN': xsrfToken,
+          },
+          body: JSON.stringify({
+            title,
+            content,
+            tag_ids: [],
+          }),
+        })
+        .then(async (response) => {
+          const body = await response.json();
+          expect(response.status, 'create post status').to.eq(201);
+          expect(body?.data?.id, 'created post id').to.be.a('number').and.be.greaterThan(0);
+
+          return {
+            id: body.data.id as number,
+          };
+        });
+    });
+  };
+
+  const goToPostDetail = (postId: number) => {
+    cy.visit(`/home/post/${postId}`);
+    cy.url({ timeout: 15000 }).should('include', `/home/post/${postId}`);
     cy.get('.post-detail-page').should('be.visible');
-    cy.get('button.comments-toggle', { timeout: 15000 }).should('be.visible').click();
-    cy.get('.comments-panel', { timeout: 15000 }).should('be.visible');
+    cy.get('[data-cy=comments-toggle]', { timeout: 15000 }).should('be.visible').click();
+    cy.get('[data-cy=comments-panel]', { timeout: 15000 }).should('be.visible');
   };
 
   const submitComment = (text: string) => {
-    cy.get('.comments-form-section textarea', { timeout: 15000 }).should('be.visible').clear().type(text);
-    cy.contains('.comment-form-actions button', 'Enviar').click();
+    cy.get('[data-cy=comment-input]', { timeout: 15000 }).should('be.visible').clear().type(text);
+    cy.get('[data-cy=comment-submit]').click();
   };
 
   beforeEach(() => {
@@ -55,15 +115,17 @@ describe('E2E - Comments (real flow)', () => {
     cy.visit('/login');
   });
 
-  it('renders comments block and comment form on real post detail', () => {
+  it('renders comments block and comment form on a created post detail', () => {
     const user = buildUniqueUser('comments_render');
 
     registerTestUser(user);
     loginAsUser(user);
-    goToRealPostDetail();
+    createPostFromBrowserSession().then(({ id }) => {
+      goToPostDetail(id);
 
-    cy.get('ul.comments-list, p.comments-empty').should('be.visible');
-    cy.get('.comments-form-section textarea').should('be.visible');
+      cy.get('[data-cy=comments-list], [data-cy=comments-empty]').should('be.visible');
+      cy.get('[data-cy=comment-input]').should('be.visible');
+    });
   });
 
   it('creates a real comment in post detail', () => {
@@ -72,10 +134,14 @@ describe('E2E - Comments (real flow)', () => {
 
     registerTestUser(user);
     loginAsUser(user);
-    goToRealPostDetail();
+    createPostFromBrowserSession().then(({ id }) => {
+      goToPostDetail(id);
 
-    submitComment(commentText);
-    cy.contains('.comments-list .comment-item-text', commentText, { timeout: 15000 }).should('be.visible');
+      submitComment(commentText);
+      cy.contains('[data-cy=comments-list] .comment-item-text', commentText, {
+        timeout: 15000,
+      }).should('be.visible');
+    });
   });
 
   it('keeps a created comment visible after reload', () => {
@@ -84,15 +150,21 @@ describe('E2E - Comments (real flow)', () => {
 
     registerTestUser(user);
     loginAsUser(user);
-    goToRealPostDetail();
+    createPostFromBrowserSession().then(({ id }) => {
+      goToPostDetail(id);
 
-    submitComment(commentText);
-    cy.contains('.comments-list .comment-item-text', commentText, { timeout: 15000 }).should('be.visible');
+      submitComment(commentText);
+      cy.contains('[data-cy=comments-list] .comment-item-text', commentText, {
+        timeout: 15000,
+      }).should('be.visible');
 
-    cy.reload();
-    cy.url({ timeout: 15000 }).should('include', `/home/post/${REAL_POST_ID}`);
-    cy.get('button.comments-toggle', { timeout: 15000 }).should('be.visible').click();
-    cy.get('.comments-panel', { timeout: 15000 }).should('be.visible');
-    cy.contains('.comments-list .comment-item-text', commentText, { timeout: 15000 }).should('be.visible');
+      cy.reload();
+      cy.url({ timeout: 15000 }).should('include', `/home/post/${id}`);
+      cy.get('[data-cy=comments-toggle]', { timeout: 15000 }).should('be.visible').click();
+      cy.get('[data-cy=comments-panel]', { timeout: 15000 }).should('be.visible');
+      cy.contains('[data-cy=comments-list] .comment-item-text', commentText, {
+        timeout: 15000,
+      }).should('be.visible');
+    });
   });
 });

@@ -49,6 +49,8 @@ describe('E2E - Profile Admin Delete', () => {
   const loginAsAdmin = () => {
     cy.visit('/login');
     cy.adminCredentials().then((credentials) => cy.loginByUI(credentials));
+    cy.url({ timeout: 15000 }).should('include', '/home');
+    cy.get('[data-cy=home-root]').should('be.visible');
   };
 
   const confirmAdminCanSearchUser = (username: string) => {
@@ -119,6 +121,7 @@ describe('E2E - Profile Admin Delete', () => {
   };
 
   const waitForAdminDeleteCompletion = (username: string) => {
+    cy.get('[data-cy=admin-delete-success]', { timeout: 15000 }).should('be.visible');
     cy.contains('[data-cy=admin-user-row]', `@${username}`, { timeout: 15000 }).should('not.exist');
   };
 
