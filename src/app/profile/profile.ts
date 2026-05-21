@@ -11,6 +11,7 @@ import { ProfileLink, ProfileLinkService } from '../services/profile-link.servic
 import { UiFeedbackService } from '../services/ui-feedback.service';
 import { PublicProfile, UpdateProfilePayload, UserService } from '../services/user.service';
 import { environment } from '../../environments/environment';
+import { AUTH_ROUTES } from '../auth/auth-routes';
 
 @Component({
   selector: 'app-profile',
@@ -523,7 +524,7 @@ export class Profile implements OnDestroy, AfterViewInit {
 
         if (error.status === 401) {
           this.cdr.detectChanges();
-          this.router.navigate(['/login']);
+          this.router.navigate([AUTH_ROUTES.login]);
           return;
         }
 
@@ -546,10 +547,10 @@ export class Profile implements OnDestroy, AfterViewInit {
   logout(): void {
     this.authService.logout().subscribe({
       next: () => {
-        this.router.navigate(['/login']);
+        this.router.navigate([AUTH_ROUTES.login]);
       },
       error: () => {
-        this.router.navigate(['/login']);
+        this.router.navigate([AUTH_ROUTES.login]);
       },
     });
   }
@@ -563,7 +564,7 @@ export class Profile implements OnDestroy, AfterViewInit {
     this.isDeletingAccount = true;
     this.authService.deleteMe().subscribe({
       next: () => {
-        this.router.navigate(['/login']);
+        this.router.navigate([AUTH_ROUTES.login]);
       },
       error: () => {
         this.isDeletingAccount = false;

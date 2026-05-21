@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { CanActivate, Router, UrlTree } from '@angular/router';
 import { Observable, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
+import { AUTH_ROUTES } from '../auth/auth-routes';
 import { AuthService } from '../services/auth.service';
 
 /**
@@ -10,7 +11,7 @@ import { AuthService } from '../services/auth.service';
  * Strategy:
  * - If there is already an in-memory user, allow navigation.
  * - Otherwise call /api/auth/me to restore session from Sanctum cookies.
- * - If restoration fails, redirect to /login.
+ * - If restoration fails, redirect to the canonical login route.
  *
  * Security note:
  * - authorization is still enforced by the backend; the guard only protects
@@ -39,7 +40,7 @@ export class AuthGuard implements CanActivate {
     // Si no hay user en memoria, intenta restaurar sesion con /api/auth/me.
     return this.authService.me().pipe(
       map(() => true),
-      catchError(() => of(this.router.parseUrl('/login'))),
+      catchError(() => of(this.router.parseUrl(AUTH_ROUTES.login))),
     );
   }
 }

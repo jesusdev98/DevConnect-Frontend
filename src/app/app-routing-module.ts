@@ -5,6 +5,7 @@ import { Home } from './home/home/home';
 import { CreatePost } from './home/create-post/create-post';
 import { HomeFeed } from './home/home-feed/home-feed';
 import { HomeSuggestions } from './home/home-suggestions/home-suggestions';
+import { AUTH_PATHS } from './auth/auth-routes';
 import { LoginComponent } from './login/login';
 import { PostDetail } from './post-detail/post-detail';
 import { Profile } from './profile/profile';
@@ -19,11 +20,11 @@ import { Register } from './register/register';
  */
 const routes: Routes = [
   // Redireccion inicial.
-  { path: '', redirectTo: 'login', pathMatch: 'full' },
+  { path: '', redirectTo: AUTH_PATHS.login, pathMatch: 'full' },
 
   // Rutas publicas.
-  { path: 'login', component: LoginComponent },
-  { path: 'register', component: Register },
+  { path: AUTH_PATHS.login, component: LoginComponent },
+  { path: AUTH_PATHS.register, component: Register },
   { path: 'suggestions', redirectTo: 'home/suggestions', pathMatch: 'full' },
 
   // Ejemplo de ruta protegida con guard.
@@ -53,7 +54,7 @@ const routes: Routes = [
   },
 
   // Fallback global.
-  { path: '**', redirectTo: 'login' },
+  { path: '**', redirectTo: AUTH_PATHS.login },
 ];
 
 @NgModule({

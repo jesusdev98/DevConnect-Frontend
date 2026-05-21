@@ -251,8 +251,8 @@ const resolveUsername = (payload: RegisterPayload): string => {
 };
 
 /**
- * Rewrites browser-side same-origin calls from the Angular frontend origin to
- * the backend listener used by cy.request.
+ * Rewrites browser-side same-origin API calls from the Angular frontend origin
+ * to the backend listener used by cy.request.
  *
  * This proxy is test infrastructure only. It does not alter application code;
  * it simply lets Cypress observe and route the exact security-sensitive calls
@@ -263,26 +263,28 @@ Cypress.Commands.add('routeLaravelBrowserTraffic', (): Cypress.Chainable<void> =
   const apiBackendUrl = resolveApiBackendUrl();
   const browserBackendHost = new URL(browserBackendUrl).host;
 
-  cy.intercept({ url: `${browserBackendUrl}/**`, middleware: true }, (req) => {
-    const originalUrl = req.url;
-    const rewrittenUrl = originalUrl.replace(browserBackendUrl, apiBackendUrl);
-    const alias = resolveBrowserAuthAlias(req.method, originalUrl);
+  ['/api/**', '/sanctum/**'].forEach((pathPattern) => {
+    cy.intercept({ url: `${browserBackendUrl}${pathPattern}`, middleware: true }, (req) => {
+      const originalUrl = req.url;
+      const rewrittenUrl = originalUrl.replace(browserBackendUrl, apiBackendUrl);
+      const alias = resolveBrowserAuthAlias(req.method, originalUrl);
 
-    if (alias) {
-      req.alias = alias;
-    }
+      if (alias) {
+        req.alias = alias;
+      }
 
-    req.url = rewrittenUrl;
-    req.headers.host = browserBackendHost;
+      req.url = rewrittenUrl;
+      req.headers.host = browserBackendHost;
 
-    req.on('before:response', (res) => {
-      Cypress.log({
-        name: 'laravel-proxy',
-        message: `${req.method} ${originalUrl} -> ${rewrittenUrl} (${res.statusCode})${alias ? ` alias=@${alias}` : ''}`,
+      req.on('before:response', (res) => {
+        Cypress.log({
+          name: 'laravel-proxy',
+          message: `${req.method} ${originalUrl} -> ${rewrittenUrl} (${res.statusCode})${alias ? ` alias=@${alias}` : ''}`,
+        });
       });
-    });
 
-    req.continue();
+      req.continue();
+    });
   });
 
   return cy.wrap(null, { log: false }).then(() => undefined);

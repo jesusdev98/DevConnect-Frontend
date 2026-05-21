@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectorRef, Component } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { AUTH_ROUTES } from '../auth/auth-routes';
 import { AuthService, RegisterData } from '../services/auth.service';
 
 @Component({
@@ -87,7 +88,7 @@ export class Register {
       next: () => {
         this.isLoading = false;
         alert('Usuario creado correctamente');
-        this.router.navigate(['/login']);
+        this.router.navigate([AUTH_ROUTES.login]);
       },
       error: (error: HttpErrorResponse) => {
         this.isLoading = false;
