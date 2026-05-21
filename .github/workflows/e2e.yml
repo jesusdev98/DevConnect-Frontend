@@ -75,7 +75,7 @@ jobs:
         with:
           install: false
           command: pnpm cypress:run -- --browser chrome
-          start: pnpm dev -- --host 127.0.0.1 --port 4200
+          start: pnpm dev:ci
           wait-on: http://127.0.0.1:4200
           wait-on-timeout: 120
 
