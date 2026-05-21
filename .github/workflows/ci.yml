@@ -46,6 +46,8 @@ jobs:
         run: pnpm audit --audit-level moderate
 
       - name: Build production bundle
+        env:
+          VITE_API_URL: https://devconnect-backend-production-c95f.up.railway.app
         run: pnpm build
 
       - name: Run unit tests

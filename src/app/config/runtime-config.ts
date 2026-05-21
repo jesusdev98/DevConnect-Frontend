@@ -6,13 +6,33 @@ declare global {
   }
 }
 
-export const resolveApiUrl = (fallback: string): string => {
-  const runtimeApiUrl =
-    typeof window !== 'undefined'
-      ? window.__DEVCONNECT_CONFIG__?.apiUrl
-      : undefined;
+type RuntimeApiOptions = {
+  required?: boolean;
+};
 
-  return normalizeApiUrl(runtimeApiUrl) ?? normalizeApiUrl(fallback) ?? '';
+type ViteImportMeta = ImportMeta & {
+  readonly env?: {
+    readonly VITE_API_URL?: string;
+  };
+};
+
+export const resolveApiUrl = (fallback?: string, options: RuntimeApiOptions = {}): string => {
+  const runtimeApiUrl =
+    typeof window !== 'undefined' ? window.__DEVCONNECT_CONFIG__?.apiUrl : undefined;
+  const buildApiUrl = (import.meta as ViteImportMeta).env?.VITE_API_URL;
+
+  const resolved =
+    normalizeApiUrl(runtimeApiUrl) ?? normalizeApiUrl(buildApiUrl) ?? normalizeApiUrl(fallback);
+
+  if (resolved !== null) {
+    return resolved;
+  }
+
+  if (options.required === true) {
+    throw new Error('Missing required API URL. Configure VITE_API_URL for production builds.');
+  }
+
+  return '';
 };
 
 const normalizeApiUrl = (value: string | undefined): string | null => {
