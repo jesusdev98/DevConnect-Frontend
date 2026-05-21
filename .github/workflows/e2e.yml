@@ -16,7 +16,6 @@ permissions:
   contents: read
 
 env:
-  CYPRESS_backendUrl: ${{ github.event.inputs.backend_url || vars.CYPRESS_BACKEND_URL }}
   CYPRESS_browserBackendUrl: http://127.0.0.1:4200
 
 jobs:
@@ -26,12 +25,12 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: 24
 
       - name: Enable Corepack
         run: |
@@ -43,14 +42,14 @@ jobs:
         run: echo "dir=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
 
       - name: Cache pnpm store
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ steps.pnpm-store.outputs.dir }}
           key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: ${{ runner.os }}-pnpm-
 
       - name: Cache Cypress binary
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/Cypress
           key: ${{ runner.os }}-cypress-${{ hashFiles('pnpm-lock.yaml') }}
@@ -59,15 +58,22 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Validate backend URL
+      - name: Resolve backend URL
+        env:
+          BACKEND_URL_INPUT: ${{ github.event.inputs.backend_url }}
+          BACKEND_URL_VARIABLE: ${{ vars.CYPRESS_BACKEND_URL }}
+          BACKEND_URL_SECRET: ${{ secrets.CYPRESS_BACKEND_URL }}
         run: |
+          CYPRESS_backendUrl="${BACKEND_URL_INPUT:-${BACKEND_URL_VARIABLE:-${BACKEND_URL_SECRET:-}}}"
+
           if [ -z "$CYPRESS_backendUrl" ]; then
-            echo "CYPRESS_BACKEND_URL repository variable or workflow_dispatch backend_url input is required."
-            echo "This Cypress suite includes real Laravel API/Sanctum specs, so it cannot run frontend-only."
+            echo "::error title=Missing Cypress backend URL::Set repository variable CYPRESS_BACKEND_URL or pass workflow_dispatch backend_url. The Cypress suite needs a live Railway backend for Sanctum and API requests."
             exit 1
           fi
+
           CYPRESS_backendUrl="${CYPRESS_backendUrl%/}"
           echo "CYPRESS_backendUrl=$CYPRESS_backendUrl" >> "$GITHUB_ENV"
+          echo "Using backend URL: $CYPRESS_backendUrl"
 
       - name: Wait for backend readiness
         run: |
@@ -84,7 +90,7 @@ jobs:
 
       - name: Upload Cypress screenshots
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: cypress-screenshots
           path: cypress/screenshots
@@ -92,7 +98,7 @@ jobs:
 
       - name: Upload Cypress videos
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: cypress-videos
           path: cypress/videos
