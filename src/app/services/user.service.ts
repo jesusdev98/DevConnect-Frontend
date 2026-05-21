@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, map, of, shareReplay } from 'rxjs';
+import { Observable, map, of, shareReplay, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 import type { ProfileLinksData } from './profile-link.service';
 
@@ -91,9 +91,10 @@ export class UserService {
 
     return this.getUsers(forceRefresh).pipe(
       map((users) => {
-        const filtered = users.filter(user =>
-          (user.username ?? '').toLowerCase().includes(normalizedQuery) ||
-          (user.name ?? '').toLowerCase().includes(normalizedQuery)
+        const filtered = users.filter(
+          (user) =>
+            (user.username ?? '').toLowerCase().includes(normalizedQuery) ||
+            (user.name ?? '').toLowerCase().includes(normalizedQuery),
         );
 
         return filtered.slice(0, limit);
@@ -108,10 +109,11 @@ export class UserService {
     }
 
     return this.http
-      .get<{ data: PublicUser[] }>(
-        `${environment.apiUrl}/api/users?search=${encodeURIComponent(normalized)}`,
-        { withCredentials: true },
-      )
+      .get<{
+        data: PublicUser[];
+      }>(`${environment.apiUrl}/api/users?search=${encodeURIComponent(normalized)}`, {
+        withCredentials: true,
+      })
       .pipe(map((res) => res.data));
   }
 
@@ -120,15 +122,21 @@ export class UserService {
       .delete(`${environment.apiUrl}/api/admin/users/${userId}`, {
         withCredentials: true,
       })
-      .pipe(map(() => undefined));
+      .pipe(
+        tap(() => {
+          this.users$ = this.createUsersRequest$();
+        }),
+        map(() => undefined),
+      );
   }
 
   getPublicProfileByUsername(username: string): Observable<PublicProfile> {
     return this.http
-      .get<{ data: PublicProfile }>(
-        `${environment.apiUrl}/api/users/username/${encodeURIComponent(username.trim())}`,
-        { withCredentials: true },
-      )
+      .get<{
+        data: PublicProfile;
+      }>(`${environment.apiUrl}/api/users/username/${encodeURIComponent(username.trim())}`, {
+        withCredentials: true,
+      })
       .pipe(map((res) => res.data));
   }
 
@@ -140,41 +148,40 @@ export class UserService {
 
   getUserAchievements(userId: number): Observable<UserAchievement[]> {
     return this.http
-      .get<{ success: boolean; data: UserAchievement[] }>(
-        `${environment.apiUrl}/api/users/${userId}/achievements`,
-        { withCredentials: true },
-      )
+      .get<{
+        success: boolean;
+        data: UserAchievement[];
+      }>(`${environment.apiUrl}/api/users/${userId}/achievements`, { withCredentials: true })
       .pipe(map((res) => res.data));
   }
 
   updateMyBio(bio: string | null): Observable<{ id: number; bio: string | null }> {
     return this.http
-      .patch<{ data: { id: number; bio: string | null } }>(
-        `${environment.apiUrl}/api/auth/me/bio`,
-        { bio },
-        { withCredentials: true },
-      )
+      .patch<{
+        data: { id: number; bio: string | null };
+      }>(`${environment.apiUrl}/api/auth/me/bio`, { bio }, { withCredentials: true })
       .pipe(map((res) => res.data));
   }
 
-  updateMyProfile(payload: UpdateProfilePayload): Observable<{ id: number; headline: string | null; skills: string[]; links: ProfileLinksData }> {
+  updateMyProfile(payload: UpdateProfilePayload): Observable<{
+    id: number;
+    headline: string | null;
+    skills: string[];
+    links: ProfileLinksData;
+  }> {
     // Un solo endpoint para no repartir el guardado en varias peticiones.
     return this.http
-      .patch<{ data: { id: number; headline: string | null; skills: string[]; links: ProfileLinksData } }>(
-        `${environment.apiUrl}/api/auth/me/profile`,
-        payload,
-        { withCredentials: true },
-      )
+      .patch<{
+        data: { id: number; headline: string | null; skills: string[]; links: ProfileLinksData };
+      }>(`${environment.apiUrl}/api/auth/me/profile`, payload, { withCredentials: true })
       .pipe(map((res) => res.data));
   }
 
   updateMyAvatar(avatar: string): Observable<{ id: number; avatar: string | null }> {
     return this.http
-      .post<{ data: { id: number; avatar: string | null } }>(
-        `${environment.apiUrl}/api/auth/me/avatar`,
-        { avatar },
-        { withCredentials: true },
-      )
+      .post<{
+        data: { id: number; avatar: string | null };
+      }>(`${environment.apiUrl}/api/auth/me/avatar`, { avatar }, { withCredentials: true })
       .pipe(map((res) => res.data));
   }
 }

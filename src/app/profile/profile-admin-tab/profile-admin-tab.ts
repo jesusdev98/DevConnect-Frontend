@@ -1,5 +1,5 @@
 import { Component, OnDestroy, inject } from '@angular/core';
-import { Observable, Subject, map, of, switchMap, take, takeUntil } from 'rxjs';
+import { Observable, Subject, map, of, switchMap, take, takeUntil, tap } from 'rxjs';
 import { PublicUser, UserService } from '../../services/user.service';
 import { ConfirmModalService } from '../../shared/confirm-modal/confirm-modal.service';
 
@@ -19,18 +19,21 @@ export class ProfileAdminTab implements OnDestroy {
 
   searchTerm: string = '';
   users: PublicUser[] = [];
+  filteredUsers: PublicUser[] = [];
   filteredUsers$: Observable<PublicUser[]>;
   isDeletingMap: Record<number, boolean> = {};
   toastMessage: string | null = null;
   toastType: 'success' | 'error' | null = null;
 
   constructor() {
-    this.filteredUsers$ = this.searchTerm$
-      .pipe(
-        map((value) => value.trim()),
-        switchMap((normalized) => this.searchUsers$(normalized)),
-        takeUntil(this.destroy$),
-      );
+    this.filteredUsers$ = this.searchTerm$.pipe(
+      map((value) => value.trim()),
+      switchMap((normalized) => this.searchUsers$(normalized)),
+      tap((filteredUsers) => {
+        this.filteredUsers = filteredUsers;
+      }),
+      takeUntil(this.destroy$),
+    );
   }
 
   onSearchTermChange(value: string): void {
@@ -40,6 +43,7 @@ export class ProfileAdminTab implements OnDestroy {
 
     if (!normalized.startsWith('@') || query.length < 2) {
       this.users = [];
+      this.filteredUsers = [];
       this.searchTerm$.next(value);
       return;
     }
@@ -80,9 +84,14 @@ export class ProfileAdminTab implements OnDestroy {
     this.userService.deleteUserByAdmin(userId).subscribe({
       next: () => {
         this.users = this.users.filter((currentUser) => Number(currentUser.id) !== userId);
-        this.refreshUsers().pipe(take(1)).subscribe(() => {
-          this.searchTerm$.next(this.searchTerm);
-        });
+        this.filteredUsers = this.filteredUsers.filter(
+          (currentUser) => Number(currentUser.id) !== userId,
+        );
+        this.refreshUsers()
+          .pipe(take(1))
+          .subscribe(() => {
+            this.searchTerm$.next(this.searchTerm);
+          });
         delete this.isDeletingMap[userId];
         this.showToast('Usuario eliminado correctamente', 'success');
       },
@@ -104,17 +113,17 @@ export class ProfileAdminTab implements OnDestroy {
     }
 
     return this.searchLocal(query).pipe(
-      switchMap((users) => users.length > 0
-        ? of(users)
-        : this.refreshUsers().pipe(
-          switchMap(() => this.searchLocal(query)),
-          switchMap((refreshedUsers) => refreshedUsers.length > 0
-            ? of(refreshedUsers)
-            : this.refreshUsers().pipe(
+      switchMap((users) =>
+        users.length > 0
+          ? of(users)
+          : this.refreshUsers().pipe(
               switchMap(() => this.searchLocal(query)),
+              switchMap((refreshedUsers) =>
+                refreshedUsers.length > 0
+                  ? of(refreshedUsers)
+                  : this.refreshUsers().pipe(switchMap(() => this.searchLocal(query))),
+              ),
             ),
-          ),
-        ),
       ),
     );
   }
@@ -124,11 +133,19 @@ export class ProfileAdminTab implements OnDestroy {
   }
 
   private searchLocal(query: string): Observable<PublicUser[]> {
-    return this.userService.searchUsersLocal(query, this.SEARCH_LIMIT);
+    return this.userService.searchUsersLocal(query, this.SEARCH_LIMIT).pipe(
+      tap((filteredUsers) => {
+        this.filteredUsers = filteredUsers;
+      }),
+    );
   }
 
   private refreshUsers(): Observable<PublicUser[]> {
-    return this.userService.getUsers(true);
+    return this.userService.getUsers(true).pipe(
+      tap((users) => {
+        this.users = users;
+      }),
+    );
   }
 
   private showToast(message: string, type: 'success' | 'error'): void {

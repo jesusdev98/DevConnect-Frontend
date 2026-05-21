@@ -13,14 +13,6 @@
  */
 describe('E2E - Autenticacion y autorizacion', () => {
   const frontendBaseUrl = Cypress.config('baseUrl') ?? 'http://127.0.0.1:4200';
-  const browserBackend = (() => {
-    const configuredBrowserBackendUrl = Cypress.env('browserBackendUrl');
-    if (typeof configuredBrowserBackendUrl === 'string' && configuredBrowserBackendUrl.length > 0) {
-      return configuredBrowserBackendUrl;
-    }
-
-    return frontendBaseUrl;
-  })();
   const apiBackend = (Cypress.env('backendUrl') as string | undefined) ?? 'http://127.0.0.1:8001';
   const authCsrfAlias = '@authCsrfRequest';
   const authLoginAlias = '@authLoginRequest';
@@ -179,11 +171,12 @@ describe('E2E - Autenticacion y autorizacion', () => {
   const fetchAdminPing = () => {
     return cy.window().then((win) =>
       win
-        .fetch(`${browserBackend}/api/admin/ping`, {
+        .fetch(`${frontendBaseUrl}/api/admin/ping`, {
           method: 'GET',
           credentials: 'include',
           headers: {
             Accept: 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
           },
         })
         .then(async (response) => {
@@ -258,7 +251,7 @@ describe('E2E - Autenticacion y autorizacion', () => {
       const xsrfToken = decodeURIComponent(xsrfCookie.slice('XSRF-TOKEN='.length));
 
       return win
-        .fetch(`${browserBackend}/api/auth/logout`, {
+        .fetch(`${frontendBaseUrl}/api/auth/logout`, {
           method: 'POST',
           credentials: 'include',
           headers: {

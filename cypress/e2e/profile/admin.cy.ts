@@ -121,6 +121,7 @@ describe('E2E - Profile Admin Delete', () => {
   };
 
   const waitForAdminDeleteCompletion = (username: string) => {
+    cy.wait('@adminDeleteUser', { timeout: 15000 }).its('response.statusCode').should('eq', 200);
     cy.get('[data-cy=admin-delete-success]', { timeout: 15000 }).should('be.visible');
     cy.contains('[data-cy=admin-user-row]', `@${username}`, { timeout: 15000 }).should('not.exist');
   };
@@ -143,6 +144,7 @@ describe('E2E - Profile Admin Delete', () => {
           cy.contains('button', 'Eliminar').click();
         });
 
+        cy.intercept('DELETE', '**/api/admin/users/*').as('adminDeleteUser');
         cy.contains('button', 'Confirmar', { timeout: 15000 }).click();
         waitForAdminDeleteCompletion(searchableUsername);
         confirmAdminCannotSearchUser(searchableUsername);
@@ -198,6 +200,7 @@ describe('E2E - Profile Admin Delete', () => {
           cy.contains('button', 'Eliminar').click();
         });
 
+        cy.intercept('DELETE', '**/api/admin/users/*').as('adminDeleteUser');
         cy.contains('button', 'Confirmar', { timeout: 15000 }).click();
         waitForAdminDeleteCompletion(searchableUsername);
         confirmAdminCannotSearchUser(searchableUsername);
