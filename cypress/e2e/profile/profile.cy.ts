@@ -7,7 +7,10 @@ describe('E2E - Profile', () => {
 
   const buildUniqueProfileUser = (prefix: string) => {
     const user = buildE2ECredentials(prefix);
-    const normalizedPrefix = prefix.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8).toLowerCase();
+    const normalizedPrefix = prefix
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .slice(0, 8)
+      .toLowerCase();
     const token = `${Date.now().toString().slice(-6)}${(uniqueUserSeed++).toString().padStart(2, '0')}`;
     const username = `${normalizedPrefix}_${token}`;
 
@@ -19,10 +22,13 @@ describe('E2E - Profile', () => {
   };
 
   const registerTestUser = (user: ReturnType<typeof buildE2ECredentials>) => {
-    return cy.registerByAPI({
-      ...user,
-      passwordConfirmation: user.passwordConfirmation,
-    }).its('status').should('eq', 201);
+    return cy
+      .registerByAPI({
+        ...user,
+        passwordConfirmation: user.passwordConfirmation,
+      })
+      .its('status')
+      .should('eq', 201);
   };
 
   const loginAsUser = (user: { usuario: string; password: string }) => {
@@ -79,7 +85,9 @@ describe('E2E - Profile', () => {
     cy.get('.profile-bio-editor #profile-bio-input').should('be.visible').clear().type(bioText);
     cy.get('.profile-bio-editor-actions .btn-bio-save').click();
 
-    cy.contains('.profile-bio-feedback.success', 'actualizada correctamente', { timeout: 15000 }).should('be.visible');
+    cy.contains('.profile-bio-feedback.success', 'actualizada correctamente', {
+      timeout: 15000,
+    }).should('be.visible');
     cy.contains('.profile-bio', bioText, { timeout: 15000 }).should('be.visible');
   });
 
@@ -100,11 +108,15 @@ describe('E2E - Profile', () => {
     cy.get('#profile-skills').should('be.visible').clear().type(skillsText);
     cy.contains('button', 'Guardar cambios').click();
 
-    cy.contains('[data-cy=profile-details-success]', 'actualizado correctamente', { timeout: 15000 }).should('be.visible');
+    cy.contains('[data-cy=profile-details-success]', 'actualizado correctamente', {
+      timeout: 15000,
+    }).should('be.visible');
     cy.contains('.profile-role', areaText, { timeout: 15000 }).should('be.visible');
     cy.contains('.profile-hero .profile-skill', 'Angular', { timeout: 15000 }).should('be.visible');
     cy.contains('.profile-hero .profile-skill', 'Laravel', { timeout: 15000 }).should('be.visible');
-    cy.contains('.profile-hero .profile-skill', 'TypeScript', { timeout: 15000 }).should('be.visible');
+    cy.contains('.profile-hero .profile-skill', 'TypeScript', { timeout: 15000 }).should(
+      'be.visible',
+    );
     cy.contains('.summary-value', areaText, { timeout: 15000 }).should('be.visible');
   });
 
@@ -189,10 +201,7 @@ describe('E2E - Profile', () => {
     seedAdminUser();
 
     cy.visit('/login');
-    cy.loginByUI({
-      identifier: 'admin@devconnect.com',
-      password: 'Miproyecto2026$',
-    });
+    cy.adminCredentials().then((credentials) => cy.loginByUI(credentials));
 
     cy.visitProtectedRoute('/profile');
     cy.get('[data-cy=profile-root]').should('be.visible');

@@ -74,6 +74,7 @@ declare global {
       registerByUI(payload: RegisterPayload, options?: UiSubmitOptions): Chainable<void>;
       registerByAPI(payload: RegisterPayload): Chainable<any>;
       loginByAPI(payload: LoginPayload): Chainable<any>;
+      adminCredentials(): Chainable<LoginPayload>;
       seedAdminUser(): Chainable<void>;
       assertLoginErrorMessage(message: string): Chainable<JQuery<HTMLElement>>;
       apiLogout(): Chainable<void>;
@@ -118,6 +119,28 @@ const resolveAdminSeedCommand = (): string => {
   const configuredCommand = Cypress.env('adminSeedCommand');
   return typeof configuredCommand === 'string' ? configuredCommand.trim() : '';
 };
+
+const resolveRequiredCypressEnv = (name: string): string => {
+  const value = Cypress.env(name);
+
+  if (typeof value !== 'string' || value.trim() === '') {
+    throw new Error(
+      `Missing Cypress env "${name}". Configure CYPRESS_${name} for admin E2E specs.`,
+    );
+  }
+
+  return value.trim();
+};
+
+Cypress.Commands.add('adminCredentials', (): Cypress.Chainable<LoginPayload> => {
+  return cy.wrap(
+    {
+      identifier: resolveRequiredCypressEnv('adminEmail'),
+      password: resolveRequiredCypressEnv('adminPassword'),
+    },
+    { log: false },
+  );
+});
 
 Cypress.Commands.add('seedAdminUser', (): Cypress.Chainable<void> => {
   const command = resolveAdminSeedCommand();

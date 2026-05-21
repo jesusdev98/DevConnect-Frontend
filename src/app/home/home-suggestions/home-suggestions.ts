@@ -14,12 +14,12 @@ type SuggestionType = (typeof suggestionTypes)[number];
 })
 /**
  * Simple feedback form that opens the user's mail client with a prefilled
- * suggestion message for the DevConnect admin account.
+ * suggestion message for the DevConnect contact inbox.
  */
 export class HomeSuggestions {
   private readonly fb = inject(FormBuilder);
 
-  readonly adminEmail = environment.adminEmail;
+  readonly contactEmail = environment.contactEmail;
   readonly suggestionTypes = suggestionTypes;
   // Tracks the active chip and whether we already showed the "sent" feedback.
   selectedType: SuggestionType = 'Idea';
@@ -87,6 +87,6 @@ export class HomeSuggestions {
     // Encode subject/body explicitly so spaces and line breaks survive in mailto URLs.
     const encodedBody = encodeURIComponent(body).replace(/%0A/g, '%0D%0A');
 
-    return `mailto:${this.adminEmail}?subject=${encodeURIComponent(subject)}&body=${encodedBody}`;
+    return `mailto:${this.contactEmail}?subject=${encodeURIComponent(subject)}&body=${encodedBody}`;
   }
 }

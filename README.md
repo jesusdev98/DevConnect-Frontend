@@ -55,10 +55,12 @@ pnpm cypress:open
 
 Cypress uses `CYPRESS_backendUrl` to target the Laravel API when it is not running on the default local port. If the browser-side API origin differs from `http://127.0.0.1:8001`, also set `CYPRESS_browserBackendUrl`.
 
+Admin specs read `CYPRESS_adminEmail` and `CYPRESS_adminPassword`. In GitHub Actions these come from repository secrets `CYPRESS_ADMIN_EMAIL` and `CYPRESS_ADMIN_PASSWORD`. For local runs, create an untracked `cypress.env.json` or pass the variables in your shell.
+
 Admin scenarios assume the admin user already exists, or you can provide a seed command:
 
 ```bash
-CYPRESS_backendUrl=http://127.0.0.1:8001 CYPRESS_adminSeedCommand="php /path/to/devconnect-backend/artisan db:seed --class=AdminUserSeeder --no-interaction" pnpm cypress:run
+CYPRESS_backendUrl=http://127.0.0.1:8001 CYPRESS_adminEmail=admin@example.test CYPRESS_adminPassword=secret CYPRESS_adminSeedCommand="php /path/to/devconnect-backend/artisan db:seed --class=AdminUserSeeder --no-interaction" pnpm cypress:run
 ```
 
 ## Docker

@@ -17,6 +17,8 @@ permissions:
 
 env:
   CYPRESS_browserBackendUrl: http://127.0.0.1:4200
+  CYPRESS_adminEmail: ${{ secrets.CYPRESS_ADMIN_EMAIL }}
+  CYPRESS_adminPassword: ${{ secrets.CYPRESS_ADMIN_PASSWORD }}
 
 jobs:
   cypress:

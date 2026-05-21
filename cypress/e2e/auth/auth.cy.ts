@@ -33,7 +33,10 @@ describe('E2E - Autenticacion y autorizacion', () => {
   // Generates deterministic but unique usernames within backend validation
   // limits so auth scenarios do not collide with each other.
   const buildUsername = (prefix: string, suffix: string) => {
-    const normalizedPrefix = prefix.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8).toLowerCase();
+    const normalizedPrefix = prefix
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .slice(0, 8)
+      .toLowerCase();
     const normalizedSuffix = suffix.slice(-8);
 
     return `${normalizedPrefix}_${normalizedSuffix}`;
@@ -56,10 +59,13 @@ describe('E2E - Autenticacion y autorizacion', () => {
   };
 
   function registerTestUser(user: any) {
-    return cy.registerByAPI({
-      ...user,
-      passwordConfirmation: user.passwordConfirmation,
-    }).its('status').should('eq', 201);
+    return cy
+      .registerByAPI({
+        ...user,
+        passwordConfirmation: user.passwordConfirmation,
+      })
+      .its('status')
+      .should('eq', 201);
   }
 
   // Ensures every test starts from a public session before exercising auth.
@@ -108,7 +114,9 @@ describe('E2E - Autenticacion y autorizacion', () => {
   // Accesses the interception history behind a given alias for duplicate-submit
   // scenarios where more than one request may be emitted.
   const getRequestHistory = (alias: string) => {
-    return cy.get(`${alias}.all`).then((interceptions) => Array.from(interceptions as unknown as ArrayLike<any>));
+    return cy
+      .get(`${alias}.all`)
+      .then((interceptions) => Array.from(interceptions as unknown as ArrayLike<any>));
   };
 
   // Asserts against the last completed response seen for an alias.
@@ -135,7 +143,9 @@ describe('E2E - Autenticacion y autorizacion', () => {
   const getCompletedInterceptions = (alias: string) => {
     return getRequestHistory(alias).then((interceptions) => {
       const requestHistory = interceptions as unknown as any[];
-      return requestHistory.filter((interception) => interception?.response?.statusCode !== undefined);
+      return requestHistory.filter(
+        (interception) => interception?.response?.statusCode !== undefined,
+      );
     });
   };
 
@@ -168,34 +178,42 @@ describe('E2E - Autenticacion y autorizacion', () => {
   // session cookies owned by the SPA, instead of a detached cy.request jar.
   const fetchAdminPing = () => {
     return cy.window().then((win) =>
-      win.fetch(`${browserBackend}/api/admin/ping`, {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-          Accept: 'application/json',
-        },
-      }).then(async (response) => {
-        const rawBody = await response.text();
+      win
+        .fetch(`${browserBackend}/api/admin/ping`, {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            Accept: 'application/json',
+          },
+        })
+        .then(async (response) => {
+          const rawBody = await response.text();
 
-        try {
-          return {
-            status: response.status,
-            body: rawBody ? JSON.parse(rawBody) : null,
-          };
-        } catch {
-          return {
-            status: response.status,
-            body: rawBody,
-          };
-        }
-      })
+          try {
+            return {
+              status: response.status,
+              body: rawBody ? JSON.parse(rawBody) : null,
+            };
+          } catch {
+            return {
+              status: response.status,
+              body: rawBody,
+            };
+          }
+        }),
     );
   };
 
   // Clears the real browser cookie jar for the expired-session scenario. This
   // avoids domain-scope ambiguity around proxied 127.0.0.1/backend traffic.
   const clearBrowserCookieJar = () => {
-    const cookieNames = ['XSRF-TOKEN', 'devconnect-session', 'devconnect_session', 'laravel-session', 'laravel_session'];
+    const cookieNames = [
+      'XSRF-TOKEN',
+      'devconnect-session',
+      'devconnect_session',
+      'laravel-session',
+      'laravel_session',
+    ];
     const domains = ['127.0.0.1', 'backend'];
 
     return cy.getAllCookies().then((cookies) => {
@@ -239,18 +257,20 @@ describe('E2E - Autenticacion y autorizacion', () => {
 
       const xsrfToken = decodeURIComponent(xsrfCookie.slice('XSRF-TOKEN='.length));
 
-      return win.fetch(`${browserBackend}/api/auth/logout`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
-          'X-XSRF-TOKEN': xsrfToken,
-        },
-      }).then((response) => {
-        expect(response.status, 'browser session invalidation').to.be.oneOf([200, 204]);
-      });
+      return win
+        .fetch(`${browserBackend}/api/auth/logout`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-XSRF-TOKEN': xsrfToken,
+          },
+        })
+        .then((response) => {
+          expect(response.status, 'browser session invalidation').to.be.oneOf([200, 204]);
+        });
     });
   };
 
@@ -259,17 +279,18 @@ describe('E2E - Autenticacion y autorizacion', () => {
       const cookieHeader = cookies.map(({ name, value }) => `${name}=${value}`).join('; ');
       const expiredAuthUrl = `${apiBackend}/api/auth/me?_expiredTs=${Date.now()}`;
 
-      return cy.request({
-        method: 'GET',
-        url: expiredAuthUrl,
-        headers: {
-          Accept: 'application/json',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          Pragma: 'no-cache',
-          Cookie: cookieHeader,
-        },
-        failOnStatusCode: false,
-      })
+      return cy
+        .request({
+          method: 'GET',
+          url: expiredAuthUrl,
+          headers: {
+            Accept: 'application/json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            Pragma: 'no-cache',
+            Cookie: cookieHeader,
+          },
+          failOnStatusCode: false,
+        })
         .its('status')
         .should('eq', 401);
     });
@@ -324,11 +345,14 @@ describe('E2E - Autenticacion y autorizacion', () => {
     const user = buildCredentials('e2e_badmail');
     cy.visit('/register');
 
-    cy.registerByUI({
-      ...user,
-      email: 'correo-no-valido',
-      passwordConfirmation: user.passwordConfirmation,
-    }, { expectRequest: false });
+    cy.registerByUI(
+      {
+        ...user,
+        email: 'correo-no-valido',
+        passwordConfirmation: user.passwordConfirmation,
+      },
+      { expectRequest: false },
+    );
 
     cy.get('[data-cy=register-validation-message]').should('be.visible');
     cy.get('[data-cy=register-email-error]').should('be.visible');
@@ -338,10 +362,13 @@ describe('E2E - Autenticacion y autorizacion', () => {
     const user = buildCredentials('e2e_nomatch');
     cy.visit('/register');
 
-    cy.registerByUI({
-      ...user,
-      passwordConfirmation: 'PasswordDiferente@1',
-    }, { expectRequest: false });
+    cy.registerByUI(
+      {
+        ...user,
+        passwordConfirmation: 'PasswordDiferente@1',
+      },
+      { expectRequest: false },
+    );
 
     cy.get('[data-cy=register-validation-message]').should('be.visible');
     cy.get('[data-cy=register-password-confirmation-error]').should('be.visible');
@@ -435,7 +462,9 @@ describe('E2E - Autenticacion y autorizacion', () => {
     cy.registerByAPI({
       ...existingUser,
       passwordConfirmation: existingUser.passwordConfirmation,
-    }).its('status').should('eq', 201);
+    })
+      .its('status')
+      .should('eq', 201);
 
     cy.visit('/login');
     cy.loginByUI({
@@ -520,7 +549,9 @@ describe('E2E - Autenticacion y autorizacion', () => {
 
   // E.* Backend-owned rate-limiting coverage marker for E2E.
   it('E1 Rate limiting login cubierto con test backend; no estable en e2e', () => {
-    cy.log('Rate limiting se valida de forma determinista en backend con tests automaticos de API.');
+    cy.log(
+      'Rate limiting se valida de forma determinista en backend con tests automaticos de API.',
+    );
   });
 
   // F.* Double-submit and session lifecycle edge cases.
@@ -570,8 +601,12 @@ describe('E2E - Autenticacion y autorizacion', () => {
       const completedRequestHistory = completedInterceptions as unknown as any[];
       expect(completedRequestHistory.length, 'completed register responses').to.be.greaterThan(0);
 
-      const completedStatusCodes = completedRequestHistory.map((interception) => interception.response.statusCode);
-      const successfulRegistrations = completedStatusCodes.filter((statusCode) => statusCode === 201);
+      const completedStatusCodes = completedRequestHistory.map(
+        (interception) => interception.response.statusCode,
+      );
+      const successfulRegistrations = completedStatusCodes.filter(
+        (statusCode) => statusCode === 201,
+      );
 
       completedStatusCodes.forEach((statusCode) => {
         expect(statusCode).to.be.oneOf([201, 422, 419]);
@@ -745,7 +780,9 @@ describe('E2E - Autenticacion y autorizacion', () => {
     cy.registerByUI(user);
 
     cy.get('[data-cy=register-error-message]').should('be.visible');
-    cy.get('[data-cy=register-submit]').should('contain.text', 'Crear cuenta').and('not.be.disabled');
+    cy.get('[data-cy=register-submit]')
+      .should('contain.text', 'Crear cuenta')
+      .and('not.be.disabled');
   });
 
   // H.* Admin endpoint authorization boundaries.
@@ -776,10 +813,7 @@ describe('E2E - Autenticacion y autorizacion', () => {
     seedAdminUser();
 
     cy.visit('/login');
-    cy.loginByUI({
-      identifier: 'admin@devconnect.com',
-      password: 'Miproyecto2026$',
-    });
+    cy.adminCredentials().then((credentials) => cy.loginByUI(credentials));
 
     fetchAdminPing().then(({ status, body }) => {
       expect(status).to.eq(200);
@@ -792,10 +826,7 @@ describe('E2E - Autenticacion y autorizacion', () => {
     seedAdminUser();
 
     cy.visit('/login');
-    cy.loginByUI({
-      identifier: 'admin@devconnect.com',
-      password: 'Miproyecto2026$',
-    });
+    cy.adminCredentials().then((credentials) => cy.loginByUI(credentials));
 
     fetchAdminPing().then(({ status }) => {
       expect(status).to.eq(200);
@@ -894,6 +925,3 @@ describe('E2E - Autenticacion y autorizacion', () => {
     cy.get('[data-cy=change-password-submit]').should('contain.text', 'Actualizar');
   });
 });
-
-
-
