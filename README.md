@@ -28,7 +28,7 @@ Default local URLs:
 - Frontend: `http://127.0.0.1:4200`
 - Backend API: `http://127.0.0.1:8001`
 
-The development environment defaults to `http://127.0.0.1:8001`. To point a deployed build at a different API origin, configure `public/env.js` at deploy time. This file is public and must contain only non-secret browser configuration:
+The development environment defaults to `http://127.0.0.1:8001`. Production builds use same-origin `/api` and `/sanctum` paths by default, which keeps Sanctum cookies readable by the browser and requires the deployment platform to proxy those paths to Laravel. If you need to override that behavior, configure `public/env.js` at deploy time. This file is public and must contain only non-secret browser configuration:
 
 ```js
 window.__DEVCONNECT_CONFIG__ = {
@@ -36,7 +36,7 @@ window.__DEVCONNECT_CONFIG__ = {
 };
 ```
 
-When no runtime API URL is provided in production, the app uses same-origin `/api` and `/sanctum` paths. That works only if the deployment platform proxies those paths to Laravel.
+When no runtime API URL is provided in production, the app falls back to same-origin `/api` and `/sanctum` paths. That works only if the deployment platform proxies those paths to Laravel. The included `vercel.json` does this for the DevConnect Vercel deployment.
 
 ## Commands
 
@@ -88,7 +88,7 @@ The Angular production output is written to `dist/frontend/browser`.
 - output: `dist/frontend/browser`
 - rewrites all routes to `index.html`
 
-For Railway/Vercel split deployment, configure Laravel CORS, Sanctum stateful domains, session cookie domain and HTTPS cookie settings to trust the Vercel frontend origin.
+For Railway/Vercel split deployment, configure Laravel CORS, Sanctum stateful domains, session cookie domain and HTTPS cookie settings to trust the Vercel frontend origin. Also proxy `/api/*` and `/sanctum/*` through Vercel so the browser keeps same-origin access to the CSRF cookie.
 
 ## Routes
 
