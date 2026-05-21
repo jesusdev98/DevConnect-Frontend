@@ -1,6 +1,5 @@
 import { CommonModule } from '@angular/common';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { SimpleChange } from '@angular/core';
 import { By } from '@angular/platform-browser';
 import { of, Subject } from 'rxjs';
 import { vi } from 'vitest';
@@ -47,11 +46,10 @@ describe('ProfileAchievementsTab', () => {
     component = fixture.componentInstance;
   });
 
-  it('renders locked and unlocked achievements', () => {
+  it('renders locked and unlocked achievements', async () => {
     userServiceMock.getUserAchievements.mockReturnValue(of([unlockedAchievement, lockedAchievement]));
 
-    setUserId(1);
-    fixture.detectChanges();
+    await setUserId(1);
 
     const cards = fixture.debugElement.queryAll(By.css('.logro-card'));
     expect(cards).toHaveLength(2);
@@ -60,30 +58,41 @@ describe('ProfileAchievementsTab', () => {
     expect(cards[1].nativeElement.classList).toContain('logro-card--locked');
   });
 
-  it('ignores stale achievement responses when switching profiles', () => {
+  it('shows an empty state when the user has no achievements', async () => {
+    userServiceMock.getUserAchievements.mockReturnValue(of([]));
+
+    await setUserId(1);
+
+    const status = fixture.debugElement.query(By.css('.logros-status'));
+    expect(status.nativeElement.textContent).toContain('Todavía no hay logros desbloqueados');
+    expect(fixture.debugElement.queryAll(By.css('.logro-card'))).toHaveLength(0);
+  });
+
+  it('ignores stale achievement responses when switching profiles', async () => {
     const firstUserResponse = new Subject<UserAchievement[]>();
     const secondUserResponse = new Subject<UserAchievement[]>();
     userServiceMock.getUserAchievements
       .mockReturnValueOnce(firstUserResponse.asObservable())
       .mockReturnValueOnce(secondUserResponse.asObservable());
 
-    setUserId(1);
-    setUserId(2);
+    await setUserId(1);
+    await setUserId(2);
 
     secondUserResponse.next([lockedAchievement]);
     fixture.detectChanges();
-    expect(component.achievements).toEqual([lockedAchievement]);
+    expect(fixture.debugElement.queryAll(By.css('.logro-card'))).toHaveLength(1);
+    expect(fixture.debugElement.query(By.css('.logro-card'))?.nativeElement.textContent).toContain('Veterano');
 
     firstUserResponse.next([unlockedAchievement]);
     fixture.detectChanges();
-    expect(component.achievements).toEqual([lockedAchievement]);
+    expect(fixture.debugElement.queryAll(By.css('.logro-card'))).toHaveLength(1);
+    expect(fixture.debugElement.query(By.css('.logro-card'))?.nativeElement.textContent).toContain('Veterano');
   });
 
-  function setUserId(userId: number | null): void {
-    const previousValue = component.userId;
+  async function setUserId(userId: number | null): Promise<void> {
     component.userId = userId;
-    component.ngOnChanges({
-      userId: new SimpleChange(previousValue, userId, previousValue === null),
-    });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
   }
 });

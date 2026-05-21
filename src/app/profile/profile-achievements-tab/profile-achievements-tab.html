@@ -1,24 +1,30 @@
-<ng-container *ngIf="isLoading">
-  <p class="logros-status">Cargando logros...</p>
-</ng-container>
+<ng-container *ngIf="achievementsState$ | async as state">
+  <ng-container *ngIf="state.status === 'loading'">
+    <p class="logros-status">Cargando logros...</p>
+  </ng-container>
 
-<ng-container *ngIf="!isLoading && hasError">
-  <p class="logros-status logros-status--error">No se pudieron cargar los logros.</p>
-</ng-container>
+  <ng-container *ngIf="state.status === 'error'">
+    <p class="logros-status logros-status--error">No se pudieron cargar los logros.</p>
+  </ng-container>
 
-<section class="logros-grid" *ngIf="!isLoading && !hasError">
-  <article
-    class="logro-card"
-    *ngFor="let achievement of achievements"
-    [class.logro-card--locked]="!achievement.unlocked"
-  >
-    <div class="logro-card-top"></div>
-    <span class="logro-icon">{{ achievement.icon }}</span>
-    <h4>{{ achievement.title }}</h4>
-    <p>{{ achievement.description }}</p>
-    <p class="logro-fecha" *ngIf="achievement.unlocked && achievement.unlockedAt">
-      Desbloqueado el {{ formatDate(achievement.unlockedAt) }}
-    </p>
-    <p class="logro-bloqueado" *ngIf="!achievement.unlocked">Bloqueado</p>
-  </article>
-</section>
+  <ng-container *ngIf="state.status === 'loaded' && state.achievements.length === 0">
+    <p class="logros-status">Todavía no hay logros desbloqueados.</p>
+  </ng-container>
+
+  <section class="logros-grid" *ngIf="state.status === 'loaded' && state.achievements.length > 0">
+    <article
+      class="logro-card"
+      *ngFor="let achievement of state.achievements"
+      [class.logro-card--locked]="!achievement.unlocked"
+    >
+      <div class="logro-card-top"></div>
+      <span class="logro-icon">{{ achievement.icon }}</span>
+      <h4>{{ achievement.title }}</h4>
+      <p>{{ achievement.description }}</p>
+      <p class="logro-fecha" *ngIf="achievement.unlocked && achievement.unlockedAt">
+        Desbloqueado el {{ formatDate(achievement.unlockedAt) }}
+      </p>
+      <p class="logro-bloqueado" *ngIf="!achievement.unlocked">Bloqueado</p>
+    </article>
+  </section>
+</ng-container>

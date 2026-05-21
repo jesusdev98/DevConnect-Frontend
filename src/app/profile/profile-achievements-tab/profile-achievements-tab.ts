@@ -1,5 +1,12 @@
-import { Component, Input, OnChanges, SimpleChanges, inject } from '@angular/core';
+import { Component, Input, inject } from '@angular/core';
+import { BehaviorSubject, catchError, distinctUntilChanged, map, Observable, of, shareReplay, startWith, switchMap } from 'rxjs';
 import { UserAchievement, UserService } from '../../services/user.service';
+
+type AchievementState =
+  | { status: 'idle'; achievements: UserAchievement[] }
+  | { status: 'loading'; achievements: UserAchievement[] }
+  | { status: 'loaded'; achievements: UserAchievement[] }
+  | { status: 'error'; achievements: UserAchievement[] };
 
 @Component({
   selector: 'app-profile-achievements-tab',
@@ -7,54 +14,38 @@ import { UserAchievement, UserService } from '../../services/user.service';
   templateUrl: './profile-achievements-tab.html',
   styleUrl: './profile-achievements-tab.scss',
 })
-export class ProfileAchievementsTab implements OnChanges {
+export class ProfileAchievementsTab {
   private readonly userService = inject(UserService);
-  private requestId = 0;
+  private readonly userIdSubject = new BehaviorSubject<number | null>(null);
 
-  @Input() userId: number | null = null;
-
-  achievements: UserAchievement[] = [];
-  isLoading = false;
-  hasError = false;
-
-  ngOnChanges(changes: SimpleChanges): void {
-    if (!changes['userId']) {
+  @Input()
+  set userId(value: number | null) {
+    if (this.userIdSubject.value === value) {
       return;
     }
 
-    if (this.userId) {
-      this.fetchAchievements(this.userId);
-      return;
-    }
-
-    this.requestId++;
-    this.achievements = [];
-    this.isLoading = false;
-    this.hasError = false;
+    this.userIdSubject.next(value);
   }
 
-  private fetchAchievements(userId: number): void {
-    const currentRequestId = ++this.requestId;
-
-    this.isLoading = true;
-    this.hasError = false;
-    this.achievements = [];
-
-    this.userService.getUserAchievements(userId).subscribe({
-      next: (data) => {
-        if (currentRequestId !== this.requestId) return;
-
-        this.achievements = data;
-        this.isLoading = false;
-      },
-      error: () => {
-        if (currentRequestId !== this.requestId) return;
-
-        this.hasError = true;
-        this.isLoading = false;
-      },
-    });
+  get userId(): number | null {
+    return this.userIdSubject.value;
   }
+
+  readonly achievementsState$: Observable<AchievementState> = this.userIdSubject.asObservable().pipe(
+    distinctUntilChanged(),
+    switchMap((userId) => {
+      if (!userId) {
+        return of<AchievementState>({ status: 'idle', achievements: [] });
+      }
+
+      return this.userService.getUserAchievements(userId).pipe(
+        map((achievements) => ({ status: 'loaded', achievements }) as AchievementState),
+        startWith({ status: 'loading', achievements: [] } as AchievementState),
+        catchError(() => of<AchievementState>({ status: 'error', achievements: [] })),
+      );
+    }),
+    shareReplay({ bufferSize: 1, refCount: true }),
+  );
 
   formatDate(dateStr: string | null): string {
     if (!dateStr) return '';
