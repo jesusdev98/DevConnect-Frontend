@@ -21,6 +21,7 @@
       <span class="logro-icon">{{ achievement.icon }}</span>
       <h4>{{ achievement.title }}</h4>
       <p>{{ achievement.description }}</p>
+      <p class="logro-requirement" *ngIf="achievement.requirement">{{ achievement.requirement }}</p>
       <p class="logro-fecha" *ngIf="achievement.unlocked && achievement.unlockedAt">
         Desbloqueado el {{ formatDate(achievement.unlockedAt) }}
       </p>

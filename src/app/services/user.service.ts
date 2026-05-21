@@ -48,6 +48,7 @@ export interface UserAchievement {
   title: string;
   description: string;
   icon: string;
+  requirement?: string | null;
   unlocked: boolean;
   unlockedAt: string | null;
 }
