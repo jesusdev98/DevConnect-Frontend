@@ -38,9 +38,7 @@ describe('E2E - Profile Admin Delete', () => {
       return configuredBrowserBackendUrl;
     }
 
-    const frontendBaseUrl = Cypress.config('baseUrl') ?? 'http://127.0.0.1:4200';
-    const frontendUrl = new URL(frontendBaseUrl);
-    return `${frontendUrl.protocol}//${frontendUrl.hostname}:8001`;
+    return Cypress.config('baseUrl') ?? 'http://127.0.0.1:4200';
   };
 
   const loginAsAdmin = () => {

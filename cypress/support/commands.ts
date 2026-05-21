@@ -101,8 +101,7 @@ const resolveBrowserBackendUrl = (): string => {
     return configuredBrowserBackendUrl;
   }
 
-  const frontendUrl = new URL(resolveFrontendBaseUrl());
-  return `${frontendUrl.protocol}//${frontendUrl.hostname}:8001`;
+  return resolveFrontendBaseUrl();
 };
 
 /**
@@ -252,8 +251,8 @@ const resolveUsername = (payload: RegisterPayload): string => {
 };
 
 /**
- * Rewrites browser-side calls from 127.0.0.1:8001 to the backend listener used
- * by cy.request while keeping frontend visits on 127.0.0.1:4200.
+ * Rewrites browser-side same-origin calls from the Angular frontend origin to
+ * the backend listener used by cy.request.
  *
  * This proxy is test infrastructure only. It does not alter application code;
  * it simply lets Cypress observe and route the exact security-sensitive calls

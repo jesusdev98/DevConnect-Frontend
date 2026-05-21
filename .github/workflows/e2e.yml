@@ -17,7 +17,7 @@ permissions:
 
 env:
   CYPRESS_backendUrl: ${{ github.event.inputs.backend_url || vars.CYPRESS_BACKEND_URL }}
-  CYPRESS_browserBackendUrl: http://127.0.0.1:8001
+  CYPRESS_browserBackendUrl: http://127.0.0.1:4200
 
 jobs:
   cypress:
@@ -68,13 +68,16 @@ jobs:
           fi
           CYPRESS_backendUrl="${CYPRESS_backendUrl%/}"
           echo "CYPRESS_backendUrl=$CYPRESS_backendUrl" >> "$GITHUB_ENV"
-          curl --fail --silent --show-error --max-time 15 "$CYPRESS_backendUrl/sanctum/csrf-cookie" > /dev/null
+
+      - name: Wait for backend readiness
+        run: |
+          pnpm exec wait-on --timeout 120000 --interval 2000 --httpTimeout 10000 "$CYPRESS_backendUrl/sanctum/csrf-cookie"
 
       - name: Run Cypress
         uses: cypress-io/github-action@v7
         with:
           install: false
-          command: pnpm cypress:run
+          command: pnpm cypress:run -- --browser chrome
           start: pnpm dev -- --host 127.0.0.1 --port 4200
           wait-on: http://127.0.0.1:4200
           wait-on-timeout: 120

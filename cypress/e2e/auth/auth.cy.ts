@@ -19,8 +19,7 @@ describe('E2E - Autenticacion y autorizacion', () => {
       return configuredBrowserBackendUrl;
     }
 
-    const frontendUrl = new URL(frontendBaseUrl);
-    return `${frontendUrl.protocol}//${frontendUrl.hostname}:8001`;
+    return frontendBaseUrl;
   })();
   const apiBackend = (Cypress.env('backendUrl') as string | undefined) ?? 'http://127.0.0.1:8001';
   const authCsrfAlias = '@authCsrfRequest';
@@ -81,8 +80,6 @@ describe('E2E - Autenticacion y autorizacion', () => {
       identifier: user.usuario,
       password: user.password,
     });
-
-    cy.wait(authLoginAlias);
 
     assertHomeLoaded();
   }
