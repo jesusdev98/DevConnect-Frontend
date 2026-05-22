@@ -268,24 +268,23 @@ describe('E2E - Autenticacion y autorizacion', () => {
   };
 
   const assertBrowserSessionRejected = () => {
-    return cy.getAllCookies().then((cookies) => {
-      const cookieHeader = cookies.map(({ name, value }) => `${name}=${value}`).join('; ');
-      const expiredAuthUrl = `${apiBackend}/api/auth/me?_expiredTs=${Date.now()}`;
+    return cy.window().then((win) => {
+      const expiredAuthUrl = `${frontendBaseUrl}/api/auth/me?_expiredTs=${Date.now()}`;
 
-      return cy
-        .request({
+      return win
+        .fetch(expiredAuthUrl, {
           method: 'GET',
-          url: expiredAuthUrl,
+          credentials: 'include',
           headers: {
             Accept: 'application/json',
             'Cache-Control': 'no-cache, no-store, must-revalidate',
             Pragma: 'no-cache',
-            Cookie: cookieHeader,
+            'X-Requested-With': 'XMLHttpRequest',
           },
-          failOnStatusCode: false,
         })
-        .its('status')
-        .should('eq', 401);
+        .then((response) => {
+          expect(response.status).to.eq(401);
+        });
     });
   };
 

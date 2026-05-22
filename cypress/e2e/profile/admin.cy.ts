@@ -60,6 +60,7 @@ describe('E2E - Profile Admin Delete', () => {
           credentials: 'include',
           headers: {
             Accept: 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
           },
         })
         .then((response) => {
@@ -84,6 +85,7 @@ describe('E2E - Profile Admin Delete', () => {
           credentials: 'include',
           headers: {
             Accept: 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
           },
         })
         .then((response) => {
@@ -126,6 +128,12 @@ describe('E2E - Profile Admin Delete', () => {
     cy.contains('[data-cy=admin-user-row]', `@${username}`, { timeout: 15000 }).should('not.exist');
   };
 
+  const confirmDeleteModal = () => {
+    cy.get('[data-cy=confirm-modal-confirm]', { timeout: 15000 })
+      .should('be.visible')
+      .click();
+  };
+
   beforeEach(() => {
     cy.routeLaravelBrowserTraffic();
     cy.resetAuthState();
@@ -144,8 +152,8 @@ describe('E2E - Profile Admin Delete', () => {
           cy.contains('button', 'Eliminar').click();
         });
 
-        cy.intercept('DELETE', '**/api/admin/users/*').as('adminDeleteUser');
-        cy.contains('button', 'Confirmar', { timeout: 15000 }).click();
+        confirmDeleteModal();
+        cy.contains('button', 'Eliminando...', { timeout: 15000 }).should('be.visible');
         waitForAdminDeleteCompletion(searchableUsername);
         confirmAdminCannotSearchUser(searchableUsername);
       });
@@ -164,7 +172,7 @@ describe('E2E - Profile Admin Delete', () => {
           cy.contains('button', 'Eliminar').click();
         });
 
-        cy.contains('button', 'Cancelar', { timeout: 15000 }).click();
+        cy.get('[data-cy=confirm-modal-cancel]', { timeout: 15000 }).click();
 
         cy.contains('[data-cy=admin-user-row]', `@${searchableUsername}`, {
           timeout: 15000,
@@ -200,8 +208,8 @@ describe('E2E - Profile Admin Delete', () => {
           cy.contains('button', 'Eliminar').click();
         });
 
-        cy.intercept('DELETE', '**/api/admin/users/*').as('adminDeleteUser');
-        cy.contains('button', 'Confirmar', { timeout: 15000 }).click();
+        confirmDeleteModal();
+        cy.contains('button', 'Eliminando...', { timeout: 15000 }).should('be.visible');
         waitForAdminDeleteCompletion(searchableUsername);
         confirmAdminCannotSearchUser(searchableUsername);
       });
