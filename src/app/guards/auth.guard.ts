@@ -38,8 +38,8 @@ export class AuthGuard implements CanActivate {
     }
 
     // Si no hay user en memoria, intenta restaurar sesion con /api/auth/me.
-    return this.authService.me().pipe(
-      map(() => true),
+    return this.authService.hydrateSession().pipe(
+      map((user) => user ? true : this.router.parseUrl(AUTH_ROUTES.login)),
       catchError(() => of(this.router.parseUrl(AUTH_ROUTES.login))),
     );
   }

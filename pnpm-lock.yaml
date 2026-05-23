@@ -52,7 +52,7 @@ importers:
         specifier: ^4.11.4
         version: 4.11.4
       cypress:
-        specifier: ^14.5.4
+        specifier: 14.5.4
         version: 14.5.4
       cypress-axe:
         specifier: ^1.7.0

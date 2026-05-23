@@ -10,11 +10,16 @@ import { vi } from 'vitest';
 
 describe('AuthGuard', () => {
   let guard: AuthGuard;
-  let authServiceMock: { me: ReturnType<typeof vi.fn>; isAuthenticated: ReturnType<typeof vi.fn> };
+  let authServiceMock: {
+    hydrateSession: ReturnType<typeof vi.fn>;
+    isAuthenticated: ReturnType<typeof vi.fn>;
+    me: ReturnType<typeof vi.fn>;
+  };
   let router: Router;
 
   beforeEach(() => {
     authServiceMock = {
+      hydrateSession: vi.fn(),
       me: vi.fn(),
       isAuthenticated: vi.fn(),
     };
@@ -37,21 +42,21 @@ describe('AuthGuard', () => {
 
     const result = await firstValueFrom(guard.canActivate());
     expect(result).toBe(true);
-    expect(authServiceMock.me).not.toHaveBeenCalled();
+    expect(authServiceMock.hydrateSession).not.toHaveBeenCalled();
   });
 
   it('reconstruye sesión con /auth/me cuando no hay sesión en memoria', async () => {
     authServiceMock.isAuthenticated.mockReturnValue(false);
-    authServiceMock.me.mockReturnValue(of({ id: 4, email: 'user@example.com' }));
+    authServiceMock.hydrateSession.mockReturnValue(of({ id: 4, email: 'user@example.com' }));
 
     const result = await firstValueFrom(guard.canActivate());
     expect(result).toBe(true);
-    expect(authServiceMock.me).toHaveBeenCalled();
+    expect(authServiceMock.hydrateSession).toHaveBeenCalled();
   });
 
   it('redirecciona a /login si la sesión no es válida', async () => {
     authServiceMock.isAuthenticated.mockReturnValue(false);
-    authServiceMock.me.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 401 })));
+    authServiceMock.hydrateSession.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 401 })));
 
     const result = await firstValueFrom(guard.canActivate());
     expect(typeof result).toBe('object');

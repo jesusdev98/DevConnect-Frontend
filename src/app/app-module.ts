@@ -1,6 +1,6 @@
 import { registerLocaleData } from '@angular/common';
 import localeEs from '@angular/common/locales/es';
-import { LOCALE_ID, NgModule, provideBrowserGlobalErrorListeners } from '@angular/core';
+import { APP_INITIALIZER, LOCALE_ID, NgModule, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { HTTP_INTERCEPTORS } from '@angular/common/http';
@@ -33,8 +33,14 @@ import { IconEdit } from './shared/icons/icon-edit/icon-edit';
 import { IconBookmark } from './shared/icons/icon-bookmark/icon-bookmark';
 import { UiToast } from './shared/ui-toast/ui-toast';
 import { ConfirmModal } from './shared/confirm-modal/confirm-modal';
+import { AuthService } from './services/auth.service';
+import { firstValueFrom } from 'rxjs';
 
 registerLocaleData(localeEs);
+
+const hydrateAuthSession = (authService: AuthService): (() => Promise<unknown>) => {
+  return () => firstValueFrom(authService.hydrateSession());
+};
 
 /**
  * Main Angular module for the DevConnect SPA.
@@ -86,6 +92,12 @@ registerLocaleData(localeEs);
     {
       provide: HTTP_INTERCEPTORS,
       useClass: CredentialsInterceptor,
+      multi: true,
+    },
+    {
+      provide: APP_INITIALIZER,
+      useFactory: hydrateAuthSession,
+      deps: [AuthService],
       multi: true,
     },
   ],

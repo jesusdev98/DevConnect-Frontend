@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, catchError, defer, finalize, map, of, switchMap, tap, throwError } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, defer, finalize, map, of, shareReplay, switchMap, tap, throwError } from 'rxjs';
 import { environment } from '../../environments/environment';
 import type { ProfileLinksData } from './profile-link.service';
 
@@ -61,6 +61,7 @@ export interface ChangePasswordData {
  */
 export class AuthService {
   private readonly userSubject = new BehaviorSubject<AuthUser | null>(null);
+  private sessionHydration$: Observable<AuthUser | null> | null = null;
   readonly user$ = this.userSubject.asObservable();
 
   constructor(private readonly http: HttpClient) {}
@@ -97,6 +98,7 @@ export class AuthService {
    */
   login(identifier: string, password: string): Observable<AuthUser> {
     const url = this.buildApiUrl(LOGIN_ROUTE_PATH);
+    this.userSubject.next(null);
     this.logDebug('login:submit:start', {
       identifier,
       csrfUrl: this.buildApiUrl('/sanctum/csrf-cookie'),
@@ -174,7 +176,29 @@ export class AuthService {
     }).pipe(
       map((res) => this.extractUser(res)),
       tap((user) => this.userSubject.next(user)),
+      catchError((error) => {
+        this.userSubject.next(null);
+        return throwError(() => error);
+      }),
     );
+  }
+
+  hydrateSession(): Observable<AuthUser | null> {
+    if (this.userSubject.value) {
+      return of(this.userSubject.value);
+    }
+
+    if (!this.sessionHydration$) {
+      this.sessionHydration$ = this.me().pipe(
+        catchError(() => of(null)),
+        finalize(() => {
+          this.sessionHydration$ = null;
+        }),
+        shareReplay({ bufferSize: 1, refCount: false }),
+      );
+    }
+
+    return this.sessionHydration$;
   }
 
   /**

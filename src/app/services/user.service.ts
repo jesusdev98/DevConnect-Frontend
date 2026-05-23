@@ -1,7 +1,8 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, map, of, shareReplay, tap } from 'rxjs';
+import { Observable, catchError, map, of, shareReplay, switchMap, tap, throwError } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { AuthService } from './auth.service';
 import type { ProfileLinksData } from './profile-link.service';
 
 export interface PublicUser {
@@ -61,6 +62,7 @@ export interface UserAchievement {
  */
 export class UserService {
   private readonly http = inject(HttpClient);
+  private readonly authService = inject(AuthService);
 
   private users$ = this.createUsersRequest$();
 
@@ -118,16 +120,24 @@ export class UserService {
   }
 
   deleteUserByAdmin(userId: number): Observable<void> {
-    return this.http
+    const request$ = this.http
       .delete(`${environment.apiUrl}/api/admin/users/${userId}`, {
         withCredentials: true,
       })
       .pipe(
         tap(() => {
-          this.users$ = this.createUsersRequest$();
+          this.invalidateUsersCache();
         }),
         map(() => undefined),
       );
+
+    return request$.pipe(
+      catchError((error: unknown) => this.retryAfterAuthRefresh(error, request$)),
+    );
+  }
+
+  invalidateUsersCache(): void {
+    this.users$ = this.createUsersRequest$();
   }
 
   getPublicProfileByUsername(username: string): Observable<PublicProfile> {
@@ -183,5 +193,25 @@ export class UserService {
         data: { id: number; avatar: string | null };
       }>(`${environment.apiUrl}/api/auth/me/avatar`, { avatar }, { withCredentials: true })
       .pipe(map((res) => res.data));
+  }
+
+  private retryAfterAuthRefresh<T>(error: unknown, request$: Observable<T>): Observable<T> {
+    if (!(error instanceof HttpErrorResponse)) {
+      return throwError(() => error);
+    }
+
+    if (error.status === 419) {
+      return this.authService.csrf().pipe(
+        switchMap(() => request$),
+      );
+    }
+
+    if (error.status === 401) {
+      return this.authService.me().pipe(
+        switchMap(() => request$),
+      );
+    }
+
+    return throwError(() => error);
   }
 }

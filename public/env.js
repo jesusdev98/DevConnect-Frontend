@@ -5,8 +5,7 @@ if (!window.__DEVCONNECT_CONFIG__.apiUrl && typeof window !== 'undefined' && win
 	const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
 	const isCypress = Boolean(window.Cypress);
 
-	window.__DEVCONNECT_CONFIG__.apiUrl = isLocalhost
-		? (isCypress ? window.location.origin : 'http://127.0.0.1:8001')
-		: window.location.origin;
+	if (isLocalhost) {
+		window.__DEVCONNECT_CONFIG__.apiUrl = isCypress ? window.location.origin : 'http://127.0.0.1:8001';
+	}
 }
-

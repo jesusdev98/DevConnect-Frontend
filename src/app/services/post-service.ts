@@ -181,9 +181,13 @@ export class PostService {
   }
 
   deletePost(id: number): Observable<void> {
-    return this.http.delete<void>(
+    const request$ = this.http.delete<void>(
       `${environment.apiUrl}/api/posts/${id}`,
       { withCredentials: true },
+    );
+
+    return request$.pipe(
+      catchError((error: unknown) => this.retryAfterAuthRefresh(error, request$)),
     );
   }
 
@@ -274,6 +278,26 @@ export class PostService {
     return this.authService.csrf().pipe(
       switchMap(() => request$),
     );
+  }
+
+  private retryAfterAuthRefresh<T>(error: unknown, request$: Observable<T>): Observable<T> {
+    if (!(error instanceof HttpErrorResponse)) {
+      return throwError(() => error);
+    }
+
+    if (error.status === 419) {
+      return this.authService.csrf().pipe(
+        switchMap(() => request$),
+      );
+    }
+
+    if (error.status === 401) {
+      return this.authService.me().pipe(
+        switchMap(() => request$),
+      );
+    }
+
+    return throwError(() => error);
   }
 
   private normalizePostsPayload(data: unknown): Post[] {
