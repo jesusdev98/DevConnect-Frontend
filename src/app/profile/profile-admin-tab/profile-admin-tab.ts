@@ -63,42 +63,44 @@ export class ProfileAdminTab implements OnDestroy {
     this.destroy$.complete();
   }
 
-  async onDeleteUser(user: PublicUser): Promise<void> {
+  onDeleteUser(user: PublicUser): void {
     const userId = Number(user.id);
     if (!Number.isFinite(userId) || userId <= 0) {
       return;
     }
 
     const username = user.username ?? 'unknown';
-    const confirmed = await this.confirmModal.confirm(`¿Eliminar la cuenta de @${username}?`);
-    if (!confirmed) {
-      return;
-    }
 
-    if (this.isDeletingMap[userId]) {
-      return;
-    }
+    this.confirmModal.confirm(`¿Eliminar la cuenta de @${username}?`).then((confirmed) => {
+      if (!confirmed) {
+        return;
+      }
 
-    this.isDeletingMap[userId] = true;
+      if (this.isDeletingMap[userId]) {
+        return;
+      }
 
-    this.userService.deleteUserByAdmin(userId).subscribe({
-      next: () => {
-        this.users = this.users.filter((currentUser) => Number(currentUser.id) !== userId);
-        this.filteredUsers = this.filteredUsers.filter(
-          (currentUser) => Number(currentUser.id) !== userId,
-        );
-        this.refreshUsers()
-          .pipe(take(1))
-          .subscribe(() => {
-            this.searchTerm$.next(this.searchTerm);
-          });
-        delete this.isDeletingMap[userId];
-        this.showToast('Usuario eliminado correctamente', 'success');
-      },
-      error: () => {
-        delete this.isDeletingMap[userId];
-        this.showToast('No se pudo eliminar el usuario', 'error');
-      },
+      this.isDeletingMap[userId] = true;
+
+      this.userService.deleteUserByAdmin(userId).subscribe({
+        next: () => {
+          this.users = this.users.filter((currentUser) => Number(currentUser.id) !== userId);
+          this.filteredUsers = this.filteredUsers.filter(
+            (currentUser) => Number(currentUser.id) !== userId,
+          );
+          this.refreshUsers()
+            .pipe(take(1))
+            .subscribe(() => {
+              this.searchTerm$.next(this.searchTerm);
+            });
+          delete this.isDeletingMap[userId];
+          this.showToast('Usuario eliminado correctamente', 'success');
+        },
+        error: () => {
+          delete this.isDeletingMap[userId];
+          this.showToast('No se pudo eliminar el usuario', 'error');
+        },
+      });
     });
   }
 

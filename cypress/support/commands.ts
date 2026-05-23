@@ -17,11 +17,13 @@ const AUTH_REGISTER_ALIAS = 'authRegisterRequest';
 const AUTH_ME_ALIAS = 'authMeRequest';
 const AUTH_CHANGE_PASSWORD_ALIAS = 'authChangePasswordRequest';
 const AUTH_PROFILE_UPDATE_ALIAS = 'authProfileUpdateRequest';
+const ADMIN_DELETE_USER_ALIAS = 'adminDeleteUser';
 const ME_ROUTE_PATH = '/api/auth/me';
 const LOGIN_ROUTE_PATH = '/api/auth/login';
 const REGISTER_ROUTE_PATH = '/api/auth/register';
 const PROFILE_ROUTE_PATH = '/api/auth/me/profile';
 const CHANGE_PASSWORD_ROUTE_PATH = '/api/auth/change-password';
+const ADMIN_USERS_ROUTE_PREFIX = '/api/admin/users/';
 const CSRF_ROUTE_PATH = '/sanctum/csrf-cookie';
 const UI_REQUEST_TIMEOUT = 15000;
 
@@ -218,6 +220,10 @@ const resolveBrowserAuthAlias = (method: string, url: string): string | undefine
 
   if (normalizedMethod === 'PATCH' && pathname === PROFILE_ROUTE_PATH) {
     return AUTH_PROFILE_UPDATE_ALIAS;
+  }
+
+  if (normalizedMethod === 'DELETE' && pathname.startsWith(ADMIN_USERS_ROUTE_PREFIX)) {
+    return ADMIN_DELETE_USER_ALIAS;
   }
 
   return undefined;
