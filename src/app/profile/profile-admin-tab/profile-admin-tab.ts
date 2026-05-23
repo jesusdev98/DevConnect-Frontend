@@ -1,5 +1,5 @@
 import { Component, OnDestroy, inject } from '@angular/core';
-import { Observable, Subject, map, of, switchMap, take, takeUntil, tap } from 'rxjs';
+import { BehaviorSubject, Observable, Subject, map, of, switchMap, take, takeUntil, tap } from 'rxjs';
 import { PublicUser, UserService } from '../../services/user.service';
 import { ConfirmModalService } from '../../shared/confirm-modal/confirm-modal.service';
 
@@ -14,6 +14,8 @@ export class ProfileAdminTab implements OnDestroy {
   private readonly confirmModal = inject(ConfirmModalService);
   private readonly destroy$ = new Subject<void>();
   private readonly searchTerm$ = new Subject<string>();
+  private readonly filteredUsersSubject = new BehaviorSubject<PublicUser[]>([]);
+  private readonly deletedUserIds = new Set<number>();
   private readonly SEARCH_LIMIT = 10;
   private toastTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -26,14 +28,17 @@ export class ProfileAdminTab implements OnDestroy {
   toastType: 'success' | 'error' | null = null;
 
   constructor() {
-    this.filteredUsers$ = this.searchTerm$.pipe(
-      map((value) => value.trim()),
-      switchMap((normalized) => this.searchUsers$(normalized)),
-      tap((filteredUsers) => {
-        this.filteredUsers = filteredUsers;
-      }),
-      takeUntil(this.destroy$),
-    );
+    this.filteredUsers$ = this.filteredUsersSubject.asObservable();
+
+    this.searchTerm$
+      .pipe(
+        map((value) => value.trim()),
+        switchMap((normalized) => this.searchUsers$(normalized)),
+        takeUntil(this.destroy$),
+      )
+      .subscribe((filteredUsers) => {
+        this.setFilteredUsers(filteredUsers);
+      });
   }
 
   onSearchTermChange(value: string): void {
@@ -43,7 +48,7 @@ export class ProfileAdminTab implements OnDestroy {
 
     if (!normalized.startsWith('@') || query.length < 2) {
       this.users = [];
-      this.filteredUsers = [];
+      this.setFilteredUsers([]);
       this.searchTerm$.next(value);
       return;
     }
@@ -61,6 +66,7 @@ export class ProfileAdminTab implements OnDestroy {
     }
     this.destroy$.next();
     this.destroy$.complete();
+    this.filteredUsersSubject.complete();
   }
 
   onDeleteUser(user: PublicUser): void {
@@ -84,9 +90,10 @@ export class ProfileAdminTab implements OnDestroy {
 
       this.userService.deleteUserByAdmin(userId).subscribe({
         next: () => {
+          this.deletedUserIds.add(userId);
           this.users = this.users.filter((currentUser) => Number(currentUser.id) !== userId);
-          this.filteredUsers = this.filteredUsers.filter(
-            (currentUser) => Number(currentUser.id) !== userId,
+          this.setFilteredUsers(
+            this.filteredUsers.filter((currentUser) => Number(currentUser.id) !== userId),
           );
           this.refreshUsers()
             .pipe(take(1))
@@ -135,11 +142,7 @@ export class ProfileAdminTab implements OnDestroy {
   }
 
   private searchLocal(query: string): Observable<PublicUser[]> {
-    return this.userService.searchUsersLocal(query, this.SEARCH_LIMIT).pipe(
-      tap((filteredUsers) => {
-        this.filteredUsers = filteredUsers;
-      }),
-    );
+    return this.userService.searchUsersLocal(query, this.SEARCH_LIMIT);
   }
 
   private refreshUsers(): Observable<PublicUser[]> {
@@ -148,6 +151,12 @@ export class ProfileAdminTab implements OnDestroy {
         this.users = users;
       }),
     );
+  }
+
+  private setFilteredUsers(users: PublicUser[]): void {
+    const visibleUsers = users.filter((user) => !this.deletedUserIds.has(Number(user.id)));
+    this.filteredUsers = visibleUsers;
+    this.filteredUsersSubject.next(visibleUsers);
   }
 
   private showToast(message: string, type: 'success' | 'error'): void {

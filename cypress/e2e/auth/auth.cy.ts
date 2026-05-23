@@ -665,7 +665,8 @@ describe('E2E - Autenticacion y autorizacion', () => {
       password: user.password,
     });
 
-    assertFlexibleLoginBehavior();
+    cy.wait(authMeAlias).its('response.statusCode').should('eq', 200);
+    assertHomeLoaded();
   });
 
   it('F6 Login con email en mayusculas valida el comportamiento real', () => {

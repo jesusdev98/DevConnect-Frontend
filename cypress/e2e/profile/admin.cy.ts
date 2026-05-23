@@ -118,14 +118,24 @@ describe('E2E - Profile Admin Delete', () => {
       .blur();
 
     return cy
-      .contains('[data-cy=admin-user-row]', `@${username}`, { timeout: 15000 })
+      .get(`[data-cy-admin-username="${username}"]`, { timeout: 15000 })
       .should('be.visible');
   };
 
-  const waitForAdminDeleteCompletion = (username: string) => {
-    cy.wait('@adminDeleteUser', { timeout: 15000 }).its('response.statusCode').should('eq', 200);
+  const waitForAdminDeleteCompletion = (username: string, expectedDeleteRequests = 1) => {
+    cy.wait('@adminDeleteUser', { timeout: 15000 }).then((interception) => {
+      cy.task(
+        'log',
+        `[adminDeleteUser] ${interception.request.method} ${interception.request.url} -> ${
+          interception.response?.statusCode ?? 'NO_RESPONSE'
+        }`,
+        { log: false },
+      );
+      expect(interception.response?.statusCode).to.eq(200);
+    });
     cy.get('[data-cy=admin-delete-success]', { timeout: 15000 }).should('be.visible');
-    cy.contains('[data-cy=admin-user-row]', `@${username}`, { timeout: 15000 }).should('not.exist');
+    cy.get(`[data-cy-admin-username="${username}"]`, { timeout: 15000 }).should('not.exist');
+    cy.get('@adminDeleteUser.all').should('have.length', expectedDeleteRequests);
   };
 
   const confirmDeleteModal = () => {
@@ -153,7 +163,6 @@ describe('E2E - Profile Admin Delete', () => {
         });
 
         confirmDeleteModal();
-        cy.contains('button', 'Eliminando...', { timeout: 15000 }).should('be.visible');
         waitForAdminDeleteCompletion(searchableUsername);
         confirmAdminCannotSearchUser(searchableUsername);
       });
@@ -204,13 +213,13 @@ describe('E2E - Profile Admin Delete', () => {
       confirmAdminCanSearchUser(persistedUsername).then((searchableUsername) => {
         openCuentaWithAdminSection();
 
-        searchVisibleAdminRow(searchableUsername).within(() => {
-          cy.contains('button', 'Eliminar').click();
-        });
+        searchVisibleAdminRow(searchableUsername)
+          .find('button.admin-delete-btn')
+          .should('not.be.disabled')
+          .dblclick();
 
         confirmDeleteModal();
-        cy.contains('button', 'Eliminando...', { timeout: 15000 }).should('be.visible');
-        waitForAdminDeleteCompletion(searchableUsername);
+        waitForAdminDeleteCompletion(searchableUsername, 1);
         confirmAdminCannotSearchUser(searchableUsername);
       });
     });
