@@ -104,6 +104,34 @@ describe('AuthService', () => {
     expect(secondResult).toEqual([7]);
   });
 
+  it('navega con el usuario de login cuando /auth/me verifica sesion pero no devuelve usuario', () => {
+    const result: number[] = [];
+
+    service.login('usuario', 'Password@1').subscribe((user) => result.push(user.id));
+
+    const csrfCall = expectCsrfRequest();
+    csrfCall.flush({});
+
+    const loginCall = httpMock.expectOne(`${environment.apiUrl}/api/auth/login`);
+    loginCall.flush({
+      success: true,
+      data: {
+        id: 8,
+        username: 'usuario',
+      },
+    });
+
+    const meCall = httpMock.expectOne(`${environment.apiUrl}/api/auth/me`);
+    meCall.flush({
+      success: true,
+      message: 'Sesion activa.',
+      data: null,
+    });
+
+    expect(result).toEqual([8]);
+    expect(service.getCurrentUser()?.id).toBe(8);
+  });
+
   it('registra usuarios y normaliza la respuesta del backend', () => {
     service.register({
       nombre: 'Ana',

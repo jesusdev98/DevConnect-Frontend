@@ -124,14 +124,8 @@ export class AuthService {
         );
       }),
       switchMap((res) => {
-        const user = this.extractUserFromAuthResponse(res);
-        if (!user) {
-          return this.me();
-        }
-
-        // Laravel rotates the session id during login; validating /me here
-        // prevents guarded navigation from outrunning the committed cookie jar.
-        return this.me();
+        const loginUser = this.extractUserFromAuthResponse(res);
+        return this.verifyLoginSession(loginUser);
       }),
       catchError((error) => {
         this.userSubject.next(null);
@@ -144,6 +138,28 @@ export class AuthService {
     );
 
     return this.loginInFlight$;
+  }
+
+  private verifyLoginSession(loginUser: AuthUser | null): Observable<AuthUser> {
+    return this.http.get<unknown>(`${environment.apiUrl}/api/auth/me`, {
+      withCredentials: true,
+    }).pipe(
+      map((res) => {
+        const sessionUser = this.extractUserFromAuthResponse(res);
+        if (sessionUser) {
+          return sessionUser;
+        }
+
+        // A 200 /me proves the rotated session cookie is usable; keep the
+        // login payload as the user source if that response body is sparse.
+        if (loginUser) {
+          return loginUser;
+        }
+
+        throw new Error('No se pudo extraer el usuario de la sesion verificada.');
+      }),
+      tap((user) => this.userSubject.next(user)),
+    );
   }
 
   /**
