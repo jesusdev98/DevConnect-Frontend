@@ -83,12 +83,17 @@ export class PostService {
    */
   getPostsPage(filters?: PostFilters, page = 1): Observable<PostPage> {
     const params = this.buildPostListParams(filters, page);
-
-    return this.http.get<PaginatedApiResponse<unknown>>(
+    const requestFactory = () => this.http.get<PaginatedApiResponse<unknown>>(
       `${environment.apiUrl}/api/posts`,
       { withCredentials: true, params },
     ).pipe(
       map((response) => this.normalizePostPage(response)),
+    );
+    const request$ = filters?.followOnly
+      ? this.authService.runWhenAuthenticated(requestFactory)
+      : requestFactory();
+
+    return request$.pipe(
       catchError((error: unknown) => this.retryAfterSessionRefresh(error, this.getPostsPage(filters, page))),
     );
   }
@@ -98,14 +103,14 @@ export class PostService {
    * Si expira CSRF (419), refresca cookie CSRF y reintenta una vez.
    */
   createPost(title: string, content: string, tagIds: number[]): Observable<Post> {
-    const request$ = this.http.post<ApiResponse<Post>>(
+    const request$ = this.authService.runWhenAuthenticated(() => this.http.post<ApiResponse<Post>>(
       `${environment.apiUrl}/api/posts`,
       { title, content, tag_ids: tagIds },
       { withCredentials: true },
     ).pipe(
       map((response) => response.data),
       tap(() => this.levelRefreshService.trigger()),
-    );
+    ));
 
     return request$.pipe(
       catchError((error: unknown) => this.retryAfterCsrfRefresh(error, request$)),
@@ -113,7 +118,7 @@ export class PostService {
   }
 
   updatePost(postId: number, title: string, content: string, tagIds: number[]): Observable<Post> {
-    const request$ = this.http.patch<ApiResponse<Post>>(
+    const request$ = this.authService.runWhenAuthenticated(() => this.http.patch<ApiResponse<Post>>(
       `${environment.apiUrl}/api/posts/${postId}`,
       { title, content, tag_ids: tagIds },
       { withCredentials: true },
@@ -126,7 +131,7 @@ export class PostService {
 
         throw new Error('No se pudo normalizar la publicación actualizada.');
       }),
-    );
+    ));
 
     return request$.pipe(
       catchError((error: unknown) => this.retryAfterCsrfRefresh(error, request$)),
@@ -181,10 +186,10 @@ export class PostService {
   }
 
   deletePost(id: number): Observable<void> {
-    const request$ = this.http.delete<void>(
+    const request$ = this.authService.runWhenAuthenticated(() => this.http.delete<void>(
       `${environment.apiUrl}/api/posts/${id}`,
       { withCredentials: true },
-    );
+    ));
 
     return request$.pipe(
       catchError((error: unknown) => this.retryAfterAuthRefresh(error, request$)),
@@ -192,12 +197,12 @@ export class PostService {
   }
 
   getSavedPosts(): Observable<Post[]> {
-    const request$ = this.http.get<ApiResponse<unknown>>(
+    const request$ = this.authService.runWhenAuthenticated(() => this.http.get<ApiResponse<unknown>>(
       `${environment.apiUrl}/api/me/saved-posts`,
       { withCredentials: true },
     ).pipe(
       map((response) => this.normalizePostsPayload(response.data)),
-    );
+    ));
 
     return request$.pipe(
       catchError((error: unknown) => this.retryAfterSessionRefresh(error, request$)),
@@ -205,12 +210,12 @@ export class PostService {
   }
 
   getLikedPosts(): Observable<Post[]> {
-    const request$ = this.http.get<ApiResponse<unknown>>(
+    const request$ = this.authService.runWhenAuthenticated(() => this.http.get<ApiResponse<unknown>>(
       `${environment.apiUrl}/api/me/liked-posts`,
       { withCredentials: true },
     ).pipe(
       map((response) => this.normalizePostsPayload(response.data)),
-    );
+    ));
 
     return request$.pipe(
       catchError((error: unknown) => this.retryAfterSessionRefresh(error, request$)),
@@ -218,7 +223,7 @@ export class PostService {
   }
 
   savePost(postId: number): Observable<Post> {
-    const request$ = this.http.post<ApiResponse<unknown>>(
+    const request$ = this.authService.runWhenAuthenticated(() => this.http.post<ApiResponse<unknown>>(
       `${environment.apiUrl}/api/posts/${postId}/save`,
       {},
       { withCredentials: true },
@@ -231,7 +236,7 @@ export class PostService {
 
         throw new Error('No se pudo normalizar la publicación guardada.');
       }),
-    );
+    ));
 
     return request$.pipe(
       catchError((error: unknown) => this.retryAfterCsrfRefresh(error, request$)),
@@ -239,7 +244,7 @@ export class PostService {
   }
 
   unsavePost(postId: number): Observable<Post> {
-    const request$ = this.http.delete<ApiResponse<unknown>>(
+    const request$ = this.authService.runWhenAuthenticated(() => this.http.delete<ApiResponse<unknown>>(
       `${environment.apiUrl}/api/posts/${postId}/save`,
       { withCredentials: true },
     ).pipe(
@@ -251,7 +256,7 @@ export class PostService {
 
         throw new Error('No se pudo normalizar la publicación desguardada.');
       }),
-    );
+    ));
 
     return request$.pipe(
       catchError((error: unknown) => this.retryAfterCsrfRefresh(error, request$)),

@@ -67,14 +67,13 @@ export class UserService {
   private users$ = this.createUsersRequest$();
 
   private createUsersRequest$(): Observable<PublicUser[]> {
-    return this.http
-      .get<{ data: PublicUser[] }>(`${environment.apiUrl}/api/users`, {
-        withCredentials: true,
-      })
-      .pipe(
-        map((res) => res.data),
-        shareReplay(1),
-      );
+    return this.authService.runWhenAuthenticated(() =>
+      this.http
+        .get<{ data: PublicUser[] }>(`${environment.apiUrl}/api/users`, {
+          withCredentials: true,
+        })
+        .pipe(map((res) => res.data)),
+    ).pipe(shareReplay(1));
   }
 
   getUsers(forceRefresh = false): Observable<PublicUser[]> {
@@ -110,17 +109,19 @@ export class UserService {
       return of([]);
     }
 
-    return this.http
-      .get<{
-        data: PublicUser[];
-      }>(`${environment.apiUrl}/api/users?search=${encodeURIComponent(normalized)}`, {
-        withCredentials: true,
-      })
-      .pipe(map((res) => res.data));
+    return this.authService.runWhenAuthenticated(() =>
+      this.http
+        .get<{
+          data: PublicUser[];
+        }>(`${environment.apiUrl}/api/users?search=${encodeURIComponent(normalized)}`, {
+          withCredentials: true,
+        })
+        .pipe(map((res) => res.data)),
+    );
   }
 
   deleteUserByAdmin(userId: number): Observable<void> {
-    const request$ = this.http
+    const request$ = this.authService.runWhenAuthenticated(() => this.http
       .delete(`${environment.apiUrl}/api/admin/users/${userId}`, {
         withCredentials: true,
       })
@@ -129,7 +130,7 @@ export class UserService {
           this.invalidateUsersCache();
         }),
         map(() => undefined),
-      );
+      ));
 
     return request$.pipe(
       catchError((error: unknown) => this.retryAfterAuthRefresh(error, request$)),
@@ -141,13 +142,13 @@ export class UserService {
   }
 
   getPublicProfileByUsername(username: string): Observable<PublicProfile> {
-    return this.http
+    return this.authService.runWhenAuthenticated(() => this.http
       .get<{
         data: PublicProfile;
       }>(`${environment.apiUrl}/api/users/username/${encodeURIComponent(username.trim())}`, {
         withCredentials: true,
       })
-      .pipe(map((res) => res.data));
+      .pipe(map((res) => res.data)));
   }
 
   getUserLevel(userId: number): Observable<UserLevel> {
@@ -166,11 +167,11 @@ export class UserService {
   }
 
   updateMyBio(bio: string | null): Observable<{ id: number; bio: string | null }> {
-    return this.http
+    return this.authService.runWhenAuthenticated(() => this.http
       .patch<{
         data: { id: number; bio: string | null };
       }>(`${environment.apiUrl}/api/auth/me/bio`, { bio }, { withCredentials: true })
-      .pipe(map((res) => res.data));
+      .pipe(map((res) => res.data)));
   }
 
   updateMyProfile(payload: UpdateProfilePayload): Observable<{
@@ -180,19 +181,19 @@ export class UserService {
     links: ProfileLinksData;
   }> {
     // Un solo endpoint para no repartir el guardado en varias peticiones.
-    return this.http
+    return this.authService.runWhenAuthenticated(() => this.http
       .patch<{
         data: { id: number; headline: string | null; skills: string[]; links: ProfileLinksData };
       }>(`${environment.apiUrl}/api/auth/me/profile`, payload, { withCredentials: true })
-      .pipe(map((res) => res.data));
+      .pipe(map((res) => res.data)));
   }
 
   updateMyAvatar(avatar: string): Observable<{ id: number; avatar: string | null }> {
-    return this.http
+    return this.authService.runWhenAuthenticated(() => this.http
       .post<{
         data: { id: number; avatar: string | null };
       }>(`${environment.apiUrl}/api/auth/me/avatar`, { avatar }, { withCredentials: true })
-      .pipe(map((res) => res.data));
+      .pipe(map((res) => res.data)));
   }
 
   private retryAfterAuthRefresh<T>(error: unknown, request$: Observable<T>): Observable<T> {

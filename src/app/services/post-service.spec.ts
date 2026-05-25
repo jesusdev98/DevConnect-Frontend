@@ -18,6 +18,7 @@ describe('PostService', () => {
           useValue: {
             csrf: () => of(null),
             me: () => of(null),
+            runWhenAuthenticated: (factory: () => unknown) => factory(),
           },
         },
       ],

@@ -32,13 +32,11 @@ export class AuthGuard implements CanActivate {
    * @returns Observable that resolves to true or a redirect UrlTree.
    */
   canActivate(): Observable<boolean | UrlTree> {
-    // Si ya hay user en memoria, permite navegar.
-    if (this.authService.isAuthenticated()) {
+    if (this.authService.isHydrated() && this.authService.isAuthenticated()) {
       return of(true);
     }
 
-    // Si no hay user en memoria, intenta restaurar sesion con /api/auth/me.
-    return this.authService.hydrateSession().pipe(
+    return this.authService.waitForHydration().pipe(
       map((user) => user ? true : this.router.parseUrl(AUTH_ROUTES.login)),
       catchError(() => of(this.router.parseUrl(AUTH_ROUTES.login))),
     );

@@ -47,6 +47,8 @@ export interface ChangePasswordData {
   password_confirmation: string;
 }
 
+export type AuthHydrationState = 'idle' | 'hydrating' | 'hydrated';
+
 @Injectable({ providedIn: 'root' })
 /**
  * Coordinates browser-side authentication against the Laravel backend.
@@ -62,10 +64,15 @@ export interface ChangePasswordData {
  */
 export class AuthService {
   private readonly userSubject = new BehaviorSubject<AuthUser | null>(null);
+  private readonly hydrationStateSubject = new BehaviorSubject<AuthHydrationState>('idle');
+  private readonly authLoadingSubject = new BehaviorSubject<boolean>(false);
   private sessionHydration$: Observable<AuthUser | null> | null = null;
+  private meInFlight$: Observable<AuthUser> | null = null;
   private loginInFlight$: Observable<AuthUser> | null = null;
   private authFlowVersion = 0;
   readonly user$ = this.userSubject.asObservable();
+  readonly hydrationState$ = this.hydrationStateSubject.asObservable();
+  readonly loading$ = this.authLoadingSubject.asObservable();
 
   constructor(private readonly http: HttpClient) {}
 
@@ -104,6 +111,7 @@ export class AuthService {
       return this.loginInFlight$;
     }
 
+    this.authLoadingSubject.next(true);
     const loginVersion = ++this.authFlowVersion;
     const normalizedIdentifier = identifier.trim();
     const url = this.buildApiUrl(LOGIN_ROUTE_PATH);
@@ -130,13 +138,18 @@ export class AuthService {
         const loginUser = this.extractUserFromAuthResponse(res);
         return this.verifyLoginSession(loginUser);
       }),
-      tap((user) => this.publishUserIfCurrent(user, loginVersion)),
+      tap((user) => {
+        this.publishUserIfCurrent(user, loginVersion);
+        this.markHydrated();
+      }),
       catchError((error) => {
         this.clearUserIfCurrent(loginVersion);
+        this.markHydrated();
         return throwError(() => error);
       }),
       finalize(() => {
         this.loginInFlight$ = null;
+        this.authLoadingSubject.next(false);
       }),
       shareReplay({ bufferSize: 1, refCount: false }),
     );
@@ -200,15 +213,25 @@ export class AuthService {
    * Rehydrates the current session from the backend and updates the SPA store.
    */
   me(): Observable<AuthUser> {
+    if (this.meInFlight$) {
+      return this.meInFlight$;
+    }
+
     const requestVersion = this.authFlowVersion;
 
-    return this.fetchCurrentUser().pipe(
+    this.meInFlight$ = this.fetchCurrentUser().pipe(
       tap((user) => this.publishUserIfCurrent(user, requestVersion)),
       catchError((error) => {
         this.clearUserIfCurrent(requestVersion);
         return throwError(() => error);
       }),
+      finalize(() => {
+        this.meInFlight$ = null;
+      }),
+      shareReplay({ bufferSize: 1, refCount: false }),
     );
+
+    return this.meInFlight$;
   }
 
   hydrateSession(): Observable<AuthUser | null> {
@@ -216,24 +239,55 @@ export class AuthService {
       return this.loginInFlight$.pipe(catchError(() => of(null)));
     }
 
+    if (this.isHydrated() && !this.sessionHydration$) {
+      return of(this.userSubject.value);
+    }
+
     if (this.userSubject.value) {
+      this.markHydrated();
       return of(this.userSubject.value);
     }
 
     if (!this.sessionHydration$) {
       const hydrationVersion = this.authFlowVersion;
+      this.hydrationStateSubject.next('hydrating');
+      this.authLoadingSubject.next(true);
 
       this.sessionHydration$ = this.fetchCurrentUser().pipe(
         tap((user) => this.publishUserIfCurrent(user, hydrationVersion)),
         catchError(() => of(null)),
         finalize(() => {
           this.sessionHydration$ = null;
+          this.markHydrated();
+          this.authLoadingSubject.next(false);
         }),
         shareReplay({ bufferSize: 1, refCount: false }),
       );
     }
 
     return this.sessionHydration$;
+  }
+
+  waitForHydration(): Observable<AuthUser | null> {
+    return this.isHydrated() ? of(this.userSubject.value) : this.hydrateSession();
+  }
+
+  requireAuthenticatedUser(): Observable<AuthUser> {
+    return this.waitForHydration().pipe(
+      switchMap((user) => {
+        if (user) {
+          return of(user);
+        }
+
+        return throwError(() => new HttpErrorResponse({ status: 401, statusText: 'Unauthenticated' }));
+      }),
+    );
+  }
+
+  runWhenAuthenticated<T>(requestFactory: () => Observable<T>): Observable<T> {
+    return this.requireAuthenticatedUser().pipe(
+      switchMap(() => requestFactory()),
+    );
   }
 
   /**
@@ -288,6 +342,10 @@ export class AuthService {
    */
   isAuthenticated(): boolean {
     return !!this.userSubject.value;
+  }
+
+  isHydrated(): boolean {
+    return this.hydrationStateSubject.value === 'hydrated';
   }
 
   /**
@@ -347,6 +405,12 @@ export class AuthService {
   private clearUserIfCurrent(version: number): void {
     if (version === this.authFlowVersion) {
       this.userSubject.next(null);
+    }
+  }
+
+  private markHydrated(): void {
+    if (this.hydrationStateSubject.value !== 'hydrated') {
+      this.hydrationStateSubject.next('hydrated');
     }
   }
 

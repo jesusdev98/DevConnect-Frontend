@@ -1,6 +1,7 @@
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { environment } from '../../environments/environment';
+import { AuthService } from './auth.service';
 import { UserService } from './user.service';
 
 describe('UserService', () => {
@@ -10,7 +11,17 @@ describe('UserService', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
-      providers: [UserService],
+      providers: [
+        UserService,
+        {
+          provide: AuthService,
+          useValue: {
+            runWhenAuthenticated: (factory: () => unknown) => factory(),
+            csrf: () => null,
+            me: () => null,
+          },
+        },
+      ],
     });
 
     service = TestBed.inject(UserService);

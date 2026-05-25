@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { environment } from '../../environments/environment';
+import { AuthService } from './auth.service';
 import { PostComment } from './comment.service';
 import { LevelRefreshService } from './level-refresh.service';
 import { Post } from './post-service';
@@ -17,6 +18,7 @@ interface LikeState {
  */
 export class LikeService {
   private readonly http = inject(HttpClient);
+  private readonly authService = inject(AuthService);
   private readonly levelRefreshService = inject(LevelRefreshService);
 
   // Lightweight UI cache keyed by entity id, hydrated from backend payloads.
@@ -57,12 +59,12 @@ export class LikeService {
     // Optimistic update: reflect instantly in UI before server round-trip.
     this.postState.set(postId, optimistic);
 
-    this.http
+    this.authService.runWhenAuthenticated(() => this.http
       .post<{ data?: { liked?: boolean; likesCount?: number } }>(
         `${environment.apiUrl}/api/posts/${postId}/likes/toggle`,
         {},
         { withCredentials: true },
-      )
+      ))
       .subscribe({
         next: (res) => {
           // Reconcile local state with canonical backend response.
@@ -92,12 +94,12 @@ export class LikeService {
     // Optimistic update: reflect instantly in UI before server round-trip.
     this.commentState.set(commentId, optimistic);
 
-    this.http
+    this.authService.runWhenAuthenticated(() => this.http
       .post<{ data?: { liked?: boolean; likesCount?: number } }>(
         `${environment.apiUrl}/api/comments/${commentId}/likes/toggle`,
         {},
         { withCredentials: true },
-      )
+      ))
       .subscribe({
         next: (res) => {
           // Reconcile local state with canonical backend response.

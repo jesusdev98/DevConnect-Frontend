@@ -61,7 +61,7 @@ export class CommentService {
       payload.parent_id = parentId;
     }
 
-    const request$ = this.http
+    const request$ = this.authService.runWhenAuthenticated(() => this.http
       .post<{ data: PostComment }>(
         `${environment.apiUrl}/api/posts/${postId}/comments`,
         payload,
@@ -74,7 +74,7 @@ export class CommentService {
           this.cache.set(postId, [...current, comment]);
           this.levelRefreshService.trigger();
         }),
-      );
+      ));
 
     return request$.pipe(
       catchError((error: unknown) => {
@@ -87,20 +87,20 @@ export class CommentService {
   }
 
   deleteComment(id: number): Observable<void> {
-    return this.http.delete<void>(
+    return this.authService.runWhenAuthenticated(() => this.http.delete<void>(
       `${environment.apiUrl}/api/comments/${id}`,
       { withCredentials: true },
-    );
+    ));
   }
 
   updateComment(commentId: number, text: string): Observable<PostComment> {
-    const request$ = this.http
+    const request$ = this.authService.runWhenAuthenticated(() => this.http
       .patch<{ data: PostComment }>(
         `${environment.apiUrl}/api/comments/${commentId}`,
         { text },
         { withCredentials: true },
       )
-      .pipe(map((res) => this.normalizeCommentNode(res.data, true)));
+      .pipe(map((res) => this.normalizeCommentNode(res.data, true))));
 
     return request$.pipe(
       catchError((error: unknown) => {

@@ -1,6 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, catchError, map, of, shareReplay, switchMap, throwError } from 'rxjs';
+import { Observable, catchError, map, shareReplay, switchMap, throwError } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 
@@ -35,14 +35,14 @@ export class HomeSidebarService {
   private readonly authService = inject(AuthService);
 
   // Petición única al backend para no repetir llamadas del sidebar.
-  private readonly sidebarRequest$ = this.http
+  private readonly sidebarRequest$ = this.authService.runWhenAuthenticated(() => this.http
     .get<ApiResponse<unknown>>(
       `${environment.apiUrl}/api/home/sidebar`,
       { withCredentials: true },
     )
     .pipe(
       map((response) => this.normalizeSidebarData(response.data)),
-    );
+    ));
 
   getSidebarData(): Observable<HomeSidebarData> {
     return this.sidebarRequest$.pipe(

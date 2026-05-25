@@ -2,6 +2,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, map, of, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { AuthService } from './auth.service';
 import { PublicUser, UserService } from './user.service';
 
 interface FollowState {
@@ -16,6 +17,7 @@ interface FollowState {
  */
 export class FollowService {
   private readonly http = inject(HttpClient);
+  private readonly authService = inject(AuthService);
   private readonly userService = inject(UserService);
 
   // Per-user follow state used by Home/Profile widgets.
@@ -42,7 +44,7 @@ export class FollowService {
     // Optimistic update for responsive follow/unfollow UX.
     this.state.set(targetId, optimistic);
 
-    return this.http
+    return this.authService.runWhenAuthenticated(() => this.http
       .post<{ data?: { following?: boolean; followersCount?: number } }>(
         `${environment.apiUrl}/api/users/${targetId}/follow/toggle`,
         {},
@@ -64,7 +66,7 @@ export class FollowService {
           this.state.set(targetId, previous);
           return of(previous);
         }),
-      );
+      ));
   }
 
   isFollowing(targetId: number): boolean {
