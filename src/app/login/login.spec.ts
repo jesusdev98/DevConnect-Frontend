@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
 import { Router, provideRouter } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { Mock, vi } from 'vitest';
 import { LoginComponent } from './login';
 import { AuthService } from '../services/auth.service';
@@ -60,6 +60,28 @@ describe('LoginComponent', () => {
     component.onSubmit();
 
     expect(authServiceMock.login).toHaveBeenCalledWith('admin', 'Password@1');
+    expect(component.isLoading).toBe(false);
+    expect(navigateSpy).toHaveBeenCalledWith(['/home']);
+  });
+
+  it('mantiene loading hasta que el login verificado emite next', () => {
+    const loginResult$ = new Subject<{ id: number; name: string }>();
+    authServiceMock.login.mockReturnValue(loginResult$);
+    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    component.loginForm.setValue({
+      identifier: 'admin',
+      password: 'Password@1',
+    });
+
+    component.onSubmit();
+
+    expect(component.isLoading).toBe(true);
+    expect(navigateSpy).not.toHaveBeenCalled();
+
+    loginResult$.next({ id: 12, name: 'Usuario' });
+    loginResult$.complete();
+
     expect(component.isLoading).toBe(false);
     expect(navigateSpy).toHaveBeenCalledWith(['/home']);
   });

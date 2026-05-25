@@ -63,6 +63,7 @@ export class AuthService {
   private readonly userSubject = new BehaviorSubject<AuthUser | null>(null);
   private sessionHydration$: Observable<AuthUser | null> | null = null;
   private loginInFlight$: Observable<AuthUser> | null = null;
+  private authFlowVersion = 0;
   readonly user$ = this.userSubject.asObservable();
 
   constructor(private readonly http: HttpClient) {}
@@ -102,6 +103,7 @@ export class AuthService {
       return this.loginInFlight$;
     }
 
+    const loginVersion = ++this.authFlowVersion;
     const normalizedIdentifier = identifier.trim();
     const url = this.buildApiUrl(LOGIN_ROUTE_PATH);
     this.logDebug('login:submit:start', {
@@ -127,8 +129,9 @@ export class AuthService {
         const loginUser = this.extractUserFromAuthResponse(res);
         return this.verifyLoginSession(loginUser);
       }),
+      tap((user) => this.publishUserIfCurrent(user, loginVersion)),
       catchError((error) => {
-        this.userSubject.next(null);
+        this.clearUserIfCurrent(loginVersion);
         return throwError(() => error);
       }),
       finalize(() => {
@@ -158,7 +161,6 @@ export class AuthService {
 
         throw new Error('No se pudo extraer el usuario de la sesion verificada.');
       }),
-      tap((user) => this.userSubject.next(user)),
     );
   }
 
@@ -203,13 +205,12 @@ export class AuthService {
    * Rehydrates the current session from the backend and updates the SPA store.
    */
   me(): Observable<AuthUser> {
-    return this.http.get<unknown>(`${environment.apiUrl}/api/auth/me`, {
-      withCredentials: true,
-    }).pipe(
-      map((res) => this.extractUser(res)),
-      tap((user) => this.userSubject.next(user)),
+    const requestVersion = this.authFlowVersion;
+
+    return this.fetchCurrentUser().pipe(
+      tap((user) => this.publishUserIfCurrent(user, requestVersion)),
       catchError((error) => {
-        this.userSubject.next(null);
+        this.clearUserIfCurrent(requestVersion);
         return throwError(() => error);
       }),
     );
@@ -225,7 +226,10 @@ export class AuthService {
     }
 
     if (!this.sessionHydration$) {
-      this.sessionHydration$ = this.me().pipe(
+      const hydrationVersion = this.authFlowVersion;
+
+      this.sessionHydration$ = this.fetchCurrentUser().pipe(
+        tap((user) => this.publishUserIfCurrent(user, hydrationVersion)),
         catchError(() => of(null)),
         finalize(() => {
           this.sessionHydration$ = null;
@@ -304,6 +308,26 @@ export class AuthService {
     }
 
     throw new Error('No se pudo extraer el usuario de la respuesta del backend.');
+  }
+
+  private fetchCurrentUser(): Observable<AuthUser> {
+    return this.http.get<unknown>(`${environment.apiUrl}/api/auth/me`, {
+      withCredentials: true,
+    }).pipe(
+      map((res) => this.extractUser(res)),
+    );
+  }
+
+  private publishUserIfCurrent(user: AuthUser, version: number): void {
+    if (version === this.authFlowVersion) {
+      this.userSubject.next(user);
+    }
+  }
+
+  private clearUserIfCurrent(version: number): void {
+    if (version === this.authFlowVersion) {
+      this.userSubject.next(null);
+    }
   }
 
   /**

@@ -132,6 +132,41 @@ describe('AuthService', () => {
     expect(service.getCurrentUser()?.id).toBe(8);
   });
 
+  it('ignora una hidratacion antigua que falla despues de un login correcto', () => {
+    service.hydrateSession().subscribe();
+
+    const staleHydrationCall = httpMock.expectOne(`${environment.apiUrl}/api/auth/me`);
+
+    service.login('usuario', 'Password@1').subscribe();
+
+    const csrfCall = expectCsrfRequest();
+    csrfCall.flush({});
+
+    const loginCall = httpMock.expectOne(`${environment.apiUrl}/api/auth/login`);
+    loginCall.flush({
+      success: true,
+      data: {
+        id: 9,
+        username: 'usuario',
+      },
+    });
+
+    const loginVerificationCall = httpMock.expectOne(`${environment.apiUrl}/api/auth/me`);
+    loginVerificationCall.flush({
+      success: true,
+      data: {
+        id: 9,
+        username: 'usuario',
+      },
+    });
+
+    expect(service.getCurrentUser()?.id).toBe(9);
+
+    staleHydrationCall.flush({}, { status: 401, statusText: 'Unauthorized' });
+
+    expect(service.getCurrentUser()?.id).toBe(9);
+  });
+
   it('registra usuarios y normaliza la respuesta del backend', () => {
     service.register({
       nombre: 'Ana',
