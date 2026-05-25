@@ -62,6 +62,10 @@ export class LoginComponent {
    * - maps backend HTTP errors into stable UI messages for the user and tests.
    */
   onSubmit(): void {
+    if (this.isLoading) {
+      return;
+    }
+
     this.isSubmitted = true;
     this.loginError = false;
     this.loginErrorMessage = '';
@@ -72,10 +76,11 @@ export class LoginComponent {
       return;
     }
 
-    const { identifier, password } = this.loginForm.value;
+    const { identifier, password } = this.loginForm.getRawValue();
+    const normalizedIdentifier = String(identifier ?? '').trim();
     this.isLoading = true;
 
-    this.authService.login(identifier, password).subscribe({
+    this.authService.login(normalizedIdentifier, password).subscribe({
       next: () => {
         this.isLoading = false;
         this.router.navigate(['/home']);

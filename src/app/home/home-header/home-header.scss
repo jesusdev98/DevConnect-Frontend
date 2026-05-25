@@ -1,9 +1,16 @@
 @use '../../../styles/text-render-fixes' as tr;
 
-.topbar {
+:host {
+  display: block;
   position: sticky;
   top: 0;
-  z-index: 1000;
+  z-index: 1050;
+  isolation: isolate;
+}
+
+.topbar {
+  position: relative;
+  z-index: 1;
   height: 64px;
   display: flex;
   align-items: center;
@@ -39,6 +46,8 @@
 }
 
 .topbar-search {
+  position: relative;
+  z-index: 2;
   flex: 1;
   max-width: 480px;
   min-width: 0;
@@ -85,7 +94,7 @@
   list-style: none;
   margin: 0;
   padding: 4px 0;
-  z-index: 1100;
+  z-index: 3;
   max-height: 260px;
   overflow-y: auto;
 }

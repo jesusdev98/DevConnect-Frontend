@@ -53,7 +53,7 @@ describe('LoginComponent', () => {
     const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
 
     component.loginForm.setValue({
-      identifier: 'admin',
+      identifier: '  admin  ',
       password: 'Password@1',
     });
 
@@ -62,6 +62,20 @@ describe('LoginComponent', () => {
     expect(authServiceMock.login).toHaveBeenCalledWith('admin', 'Password@1');
     expect(component.isLoading).toBe(false);
     expect(navigateSpy).toHaveBeenCalledWith(['/home']);
+  });
+
+  it('ignora un segundo submit mientras el login sigue en curso', () => {
+    authServiceMock.login.mockReturnValue(of({ id: 12, name: 'Usuario' }));
+
+    component.loginForm.setValue({
+      identifier: 'admin',
+      password: 'Password@1',
+    });
+    component.isLoading = true;
+
+    component.onSubmit();
+
+    expect(authServiceMock.login).not.toHaveBeenCalled();
   });
 
   it('muestra mensaje genérico si credenciales son inválidas', () => {

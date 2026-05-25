@@ -62,6 +62,7 @@ export interface ChangePasswordData {
 export class AuthService {
   private readonly userSubject = new BehaviorSubject<AuthUser | null>(null);
   private sessionHydration$: Observable<AuthUser | null> | null = null;
+  private loginInFlight$: Observable<AuthUser> | null = null;
   readonly user$ = this.userSubject.asObservable();
 
   constructor(private readonly http: HttpClient) {}
@@ -97,18 +98,22 @@ export class AuthService {
    * state from the response, falling back to /auth/me if necessary.
    */
   login(identifier: string, password: string): Observable<AuthUser> {
+    if (this.loginInFlight$) {
+      return this.loginInFlight$;
+    }
+
+    const normalizedIdentifier = identifier.trim();
     const url = this.buildApiUrl(LOGIN_ROUTE_PATH);
-    this.userSubject.next(null);
     this.logDebug('login:submit:start', {
-      identifier,
+      identifier: normalizedIdentifier,
       csrfUrl: this.buildApiUrl('/sanctum/csrf-cookie'),
       postUrl: url,
     });
 
-    return this.csrf().pipe(
+    this.loginInFlight$ = this.csrf().pipe(
       switchMap(() => {
         this.logDebug('login:post:start', { url });
-        return this.http.post<unknown>(url, { identifier, password }, {
+        return this.http.post<unknown>(url, { identifier: normalizedIdentifier, password }, {
           withCredentials: true,
         }).pipe(
           tap(() => this.logDebug('login:post:success', { url })),
@@ -120,14 +125,25 @@ export class AuthService {
       }),
       switchMap((res) => {
         const user = this.extractUserFromAuthResponse(res);
-        if (user) {
-          this.userSubject.next(user);
-          return of(user);
+        if (!user) {
+          return this.me();
         }
 
+        // Laravel rotates the session id during login; validating /me here
+        // prevents guarded navigation from outrunning the committed cookie jar.
         return this.me();
       }),
+      catchError((error) => {
+        this.userSubject.next(null);
+        return throwError(() => error);
+      }),
+      finalize(() => {
+        this.loginInFlight$ = null;
+      }),
+      shareReplay({ bufferSize: 1, refCount: false }),
     );
+
+    return this.loginInFlight$;
   }
 
   /**
@@ -184,6 +200,10 @@ export class AuthService {
   }
 
   hydrateSession(): Observable<AuthUser | null> {
+    if (this.loginInFlight$) {
+      return this.loginInFlight$.pipe(catchError(() => of(null)));
+    }
+
     if (this.userSubject.value) {
       return of(this.userSubject.value);
     }

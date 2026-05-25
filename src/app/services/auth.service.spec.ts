@@ -31,9 +31,10 @@ describe('AuthService', () => {
   });
 
   it('inicia sesión llamando primero al endpoint CSRF y luego a auth/login', () => {
-    service.login('usuario', 'Password@1').subscribe((user) => {
+    service.login('  usuario  ', 'Password@1').subscribe((user) => {
       expect(user.id).toBe(3);
       expect(user.username).toBe('usuario');
+      expect(service.getCurrentUser()?.id).toBe(3);
     });
 
     const csrfCall = expectCsrfRequest();
@@ -57,6 +58,50 @@ describe('AuthService', () => {
         email: 'usuario@example.com',
       },
     });
+
+    const meCall = httpMock.expectOne(`${environment.apiUrl}/api/auth/me`);
+    expect(meCall.request.method).toBe('GET');
+    expect(meCall.request.withCredentials).toBe(true);
+    meCall.flush({
+      success: true,
+      data: {
+        id: 3,
+        username: 'usuario',
+        email: 'usuario@example.com',
+      },
+    });
+  });
+
+  it('reutiliza un unico pipeline cuando hay dos login concurrentes', () => {
+    const firstResult: number[] = [];
+    const secondResult: number[] = [];
+
+    service.login('usuario', 'Password@1').subscribe((user) => firstResult.push(user.id));
+    service.login('usuario', 'Password@1').subscribe((user) => secondResult.push(user.id));
+
+    const csrfCall = expectCsrfRequest();
+    csrfCall.flush({});
+
+    const loginCall = httpMock.expectOne(`${environment.apiUrl}/api/auth/login`);
+    loginCall.flush({
+      success: true,
+      data: {
+        id: 7,
+        username: 'usuario',
+      },
+    });
+
+    const meCall = httpMock.expectOne(`${environment.apiUrl}/api/auth/me`);
+    meCall.flush({
+      success: true,
+      data: {
+        id: 7,
+        username: 'usuario',
+      },
+    });
+
+    expect(firstResult).toEqual([7]);
+    expect(secondResult).toEqual([7]);
   });
 
   it('registra usuarios y normaliza la respuesta del backend', () => {
