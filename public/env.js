@@ -7,5 +7,7 @@ if (!window.__DEVCONNECT_CONFIG__.apiUrl && typeof window !== 'undefined' && win
 
 	if (isLocalhost) {
 		window.__DEVCONNECT_CONFIG__.apiUrl = isCypress ? window.location.origin : 'http://127.0.0.1:8001';
+	} else {
+		window.__DEVCONNECT_CONFIG__.apiUrl = window.location.origin;
 	}
 }

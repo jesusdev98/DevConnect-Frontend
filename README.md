@@ -159,17 +159,23 @@ Default local URLs:
 
 Development defaults to `http://127.0.0.1:8001`.
 
-Production builds require `VITE_API_URL` because `pnpm build` injects that value at build time. After the app is built, `public/env.js` can still override the browser API origin at runtime:
+Production builds require `VITE_API_URL` because `pnpm build` injects that value at build time. For Vercel deployments, use the frontend origin so browser requests stay same-origin and flow through the rewrites:
+
+```bash
+VITE_API_URL=https://devconnect-free.vercel.app pnpm build
+```
+
+After the app is built, `public/env.js` can still override the browser API origin at runtime:
 
 ```js
 window.__DEVCONNECT_CONFIG__ = {
-  apiUrl: 'https://your-laravel-api.example.com',
+  apiUrl: 'https://devconnect-free.vercel.app',
 };
 ```
 
 `public/env.js` is public and must not contain secrets.
 
-If `public/env.js` does not provide `apiUrl`, the browser falls back to same-origin behavior. That only works correctly when the hosting platform proxies `/api` and `/sanctum` to Laravel.
+In deployed browsers, the checked-in `public/env.js` defaults to `window.location.origin`. That only works correctly when the hosting platform proxies `/api` and `/sanctum` to Laravel.
 
 ---
 
@@ -236,7 +242,7 @@ For the exact runtime config, `VITE_API_URL` requirement, Docker commands, and p
 Build example:
 
 ```bash
-VITE_API_URL=https://your-laravel-api.example.com pnpm build
+VITE_API_URL=https://devconnect-free.vercel.app pnpm build
 ```
 
 ---

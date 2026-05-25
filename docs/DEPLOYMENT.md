@@ -7,14 +7,14 @@ Production builds require `VITE_API_URL`.
 Example:
 
 ```bash
-VITE_API_URL=https://your-laravel-api.example.com pnpm build
+VITE_API_URL=https://your-vercel-app.vercel.app pnpm build
 ```
 
 The frontend can read browser-safe runtime configuration from `public/env.js`:
 
 ```js
 window.__DEVCONNECT_CONFIG__ = {
-  apiUrl: 'https://your-laravel-api.example.com',
+  apiUrl: 'https://your-vercel-app.vercel.app',
 };
 ```
 
@@ -22,7 +22,9 @@ This file is public and must not contain secrets.
 
 ## Same-origin production mode
 
-When no runtime API URL is provided in `public/env.js`, the browser falls back to same-origin `/api` and `/sanctum` paths.
+In deployed browsers, `public/env.js` defaults `apiUrl` to `window.location.origin`.
+This keeps Sanctum CSRF/session cookies same-origin for the SPA while Vercel proxies
+`/api/*` and `/sanctum/*` to Laravel internally.
 
 This requires the hosting platform to proxy those routes to Laravel.
 
