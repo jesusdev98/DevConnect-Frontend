@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, HttpClientTestingModule } from '@angular/common/http/testing';
 import { HttpErrorResponse } from '@angular/common/http';
+import { vi } from 'vitest';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 
@@ -17,6 +18,8 @@ describe('AuthService', () => {
     );
 
   beforeEach(() => {
+    vi.useFakeTimers();
+
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
       providers: [AuthService],
@@ -28,9 +31,10 @@ describe('AuthService', () => {
 
   afterEach(() => {
     httpMock.verify();
+    vi.useRealTimers();
   });
 
-  it('inicia sesión llamando primero al endpoint CSRF y luego a auth/login', () => {
+  it('inicia sesion llamando primero al endpoint CSRF y luego a auth/login', () => {
     service.login('  usuario  ', 'Password@1').subscribe((user) => {
       expect(user.id).toBe(3);
       expect(user.username).toBe('usuario');
@@ -59,6 +63,7 @@ describe('AuthService', () => {
       },
     });
 
+    vi.advanceTimersByTime(100);
     const meCall = httpMock.expectOne(`${environment.apiUrl}/api/auth/me`);
     expect(meCall.request.method).toBe('GET');
     expect(meCall.request.withCredentials).toBe(true);
@@ -91,6 +96,7 @@ describe('AuthService', () => {
       },
     });
 
+    vi.advanceTimersByTime(100);
     const meCall = httpMock.expectOne(`${environment.apiUrl}/api/auth/me`);
     meCall.flush({
       success: true,
@@ -104,7 +110,7 @@ describe('AuthService', () => {
     expect(secondResult).toEqual([7]);
   });
 
-  it('navega con el usuario de login cuando /auth/me verifica sesion pero no devuelve usuario', () => {
+  it('usa el usuario de login cuando auth/me verifica sesion pero no devuelve usuario', () => {
     const result: number[] = [];
 
     service.login('usuario', 'Password@1').subscribe((user) => result.push(user.id));
@@ -121,6 +127,7 @@ describe('AuthService', () => {
       },
     });
 
+    vi.advanceTimersByTime(100);
     const meCall = httpMock.expectOne(`${environment.apiUrl}/api/auth/me`);
     meCall.flush({
       success: true,
@@ -130,6 +137,78 @@ describe('AuthService', () => {
 
     expect(result).toEqual([8]);
     expect(service.getCurrentUser()?.id).toBe(8);
+  });
+
+  it('reintenta una vez la verificacion post-login si auth/me devuelve 401 inmediato', () => {
+    const result: number[] = [];
+
+    service.login('usuario', 'Password@1').subscribe((user) => result.push(user.id));
+
+    const csrfCall = expectCsrfRequest();
+    csrfCall.flush({});
+
+    const loginCall = httpMock.expectOne(`${environment.apiUrl}/api/auth/login`);
+    loginCall.flush({
+      success: true,
+      data: {
+        id: 10,
+        username: 'usuario',
+      },
+    });
+
+    vi.advanceTimersByTime(100);
+    const firstMeCall = httpMock.expectOne(`${environment.apiUrl}/api/auth/me`);
+    firstMeCall.flush({}, { status: 401, statusText: 'Unauthorized' });
+
+    expect(result).toEqual([]);
+    expect(service.getCurrentUser()).toBeNull();
+
+    vi.advanceTimersByTime(100);
+    const retryMeCall = httpMock.expectOne(`${environment.apiUrl}/api/auth/me`);
+    retryMeCall.flush({
+      success: true,
+      data: {
+        id: 10,
+        username: 'usuario',
+      },
+    });
+
+    expect(result).toEqual([10]);
+    expect(service.getCurrentUser()?.id).toBe(10);
+  });
+
+  it('falla login si auth/me devuelve 401 tambien en el unico reintento', () => {
+    let errorStatus: number | undefined;
+
+    service.login('usuario', 'Password@1').subscribe({
+      next: () => { throw new Error('No debia autenticar.'); },
+      error: (error: HttpErrorResponse) => {
+        errorStatus = error.status;
+      },
+    });
+
+    const csrfCall = expectCsrfRequest();
+    csrfCall.flush({});
+
+    const loginCall = httpMock.expectOne(`${environment.apiUrl}/api/auth/login`);
+    loginCall.flush({
+      success: true,
+      data: {
+        id: 11,
+        username: 'usuario',
+      },
+    });
+
+    vi.advanceTimersByTime(100);
+    const firstMeCall = httpMock.expectOne(`${environment.apiUrl}/api/auth/me`);
+    firstMeCall.flush({}, { status: 401, statusText: 'Unauthorized' });
+
+    vi.advanceTimersByTime(100);
+    const retryMeCall = httpMock.expectOne(`${environment.apiUrl}/api/auth/me`);
+    retryMeCall.flush({}, { status: 401, statusText: 'Unauthorized' });
+
+    expect(errorStatus).toBe(401);
+    expect(service.getCurrentUser()).toBeNull();
   });
 
   it('ignora una hidratacion antigua que falla despues de un login correcto', () => {
@@ -151,6 +230,7 @@ describe('AuthService', () => {
       },
     });
 
+    vi.advanceTimersByTime(100);
     const loginVerificationCall = httpMock.expectOne(`${environment.apiUrl}/api/auth/me`);
     loginVerificationCall.flush({
       success: true,
@@ -170,7 +250,7 @@ describe('AuthService', () => {
   it('registra usuarios y normaliza la respuesta del backend', () => {
     service.register({
       nombre: 'Ana',
-      apellidos: 'Pérez',
+      apellidos: 'Perez',
       usuario: 'ana_user',
       email: 'ana@example.com',
       password: 'Password@1',
@@ -193,7 +273,7 @@ describe('AuthService', () => {
       data: {
         user: {
           id: 10,
-          name: 'Ana Pérez',
+          name: 'Ana Perez',
           username: 'ana_user',
           email: 'ana@example.com',
         },
@@ -257,7 +337,7 @@ describe('AuthService', () => {
 
   it('propaga un error de rate limit', () => {
     service.login('usuario', 'Password@1').subscribe({
-      next: () => { throw new Error('No debía entrar a success.'); },
+      next: () => { throw new Error('No debia entrar a success.'); },
       error: (error: HttpErrorResponse) => {
         expect(error.status).toBe(429);
       },

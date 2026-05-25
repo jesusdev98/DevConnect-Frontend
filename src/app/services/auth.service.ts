@@ -1,11 +1,12 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, catchError, defer, finalize, map, of, shareReplay, switchMap, tap, throwError } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, defer, finalize, map, of, shareReplay, switchMap, tap, throwError, timer } from 'rxjs';
 import { environment } from '../../environments/environment';
 import type { ProfileLinksData } from './profile-link.service';
 
 const LOGIN_ROUTE_PATH = '/api/auth/login';
 const REGISTER_ROUTE_PATH = '/api/auth/register';
+const LOGIN_SESSION_VERIFICATION_DELAY_MS = 100;
 
 /**
  * Minimal shape used by the SPA to represent the authenticated user.
@@ -144,22 +145,16 @@ export class AuthService {
   }
 
   private verifyLoginSession(loginUser: AuthUser | null): Observable<AuthUser> {
-    return this.http.get<unknown>(`${environment.apiUrl}/api/auth/me`, {
-      withCredentials: true,
-    }).pipe(
-      map((res) => {
-        const sessionUser = this.extractUserFromAuthResponse(res);
-        if (sessionUser) {
-          return sessionUser;
+    return timer(LOGIN_SESSION_VERIFICATION_DELAY_MS).pipe(
+      switchMap(() => this.fetchVerifiedLoginUser(loginUser)),
+      catchError((error) => {
+        if (!this.isUnauthorizedHttpError(error)) {
+          return throwError(() => error);
         }
 
-        // A 200 /me proves the rotated session cookie is usable; keep the
-        // login payload as the user source if that response body is sparse.
-        if (loginUser) {
-          return loginUser;
-        }
-
-        throw new Error('No se pudo extraer el usuario de la sesion verificada.');
+        return timer(LOGIN_SESSION_VERIFICATION_DELAY_MS).pipe(
+          switchMap(() => this.fetchVerifiedLoginUser(loginUser)),
+        );
       }),
     );
   }
@@ -316,6 +311,31 @@ export class AuthService {
     }).pipe(
       map((res) => this.extractUser(res)),
     );
+  }
+
+  private fetchVerifiedLoginUser(loginUser: AuthUser | null): Observable<AuthUser> {
+    return this.http.get<unknown>(`${environment.apiUrl}/api/auth/me`, {
+      withCredentials: true,
+    }).pipe(
+      map((res) => {
+        const sessionUser = this.extractUserFromAuthResponse(res);
+        if (sessionUser) {
+          return sessionUser;
+        }
+
+        // A 200 /me proves the rotated session cookie is usable; keep the
+        // login payload as the user source if that response body is sparse.
+        if (loginUser) {
+          return loginUser;
+        }
+
+        throw new Error('No se pudo extraer el usuario de la sesion verificada.');
+      }),
+    );
+  }
+
+  private isUnauthorizedHttpError(error: unknown): boolean {
+    return error instanceof HttpErrorResponse && error.status === 401;
   }
 
   private publishUserIfCurrent(user: AuthUser, version: number): void {
