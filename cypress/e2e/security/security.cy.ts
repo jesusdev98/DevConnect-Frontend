@@ -46,13 +46,14 @@ describe('E2E - Security edge cases (real flow)', () => {
 
     return cy.wait('@contentCreatePost', { timeout: 15000 }).then((interception) => {
       const pathname = new URL(interception.request.url).pathname.replace(/\/$/, '');
-      cy.task('log', `[contentCreatePost] ${interception.request.method} ${interception.request.url} -> ${interception.response?.statusCode ?? 'NO_RESPONSE'}`, { log: false });
       expect(pathname, 'post create endpoint').to.eq('/api/posts');
       expect(interception.response?.statusCode, 'create post status').to.eq(201);
       const postId = interception.response?.body?.data?.id;
       expect(postId, 'created post id').to.be.a('number').and.be.greaterThan(0);
 
-      return postId as number;
+      return cy
+        .task('log', `[contentCreatePost] ${interception.request.method} ${interception.request.url} -> ${interception.response?.statusCode ?? 'NO_RESPONSE'}`, { log: false })
+        .then(() => cy.wrap(postId as number, { log: false }));
     });
   };
 
