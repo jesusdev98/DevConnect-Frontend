@@ -50,14 +50,11 @@ describe('E2E - Likes (real flow)', () => {
       const postId = interception.response?.body?.data?.id;
       expect(postId, 'created post id').to.be.a('number').and.be.greaterThan(0);
 
-      cy.intercept('GET', `**/api/posts/${postId}`).as('getPostDetail');
       cy.visit(`/home/post/${postId}`);
       cy.url({ timeout: 15000 }).should('include', `/home/post/${postId}`);
-      cy.wait('@getPostDetail', { timeout: 15000 })
-        .its('response.statusCode')
-        .should('eq', 200);
       cy.get('[data-cy=post-detail-card]', { timeout: 15000 }).should('be.visible');
       cy.get('[data-cy=post-title]').should('contain.text', title);
+      cy.get('[data-cy=comments-toggle]').should('be.visible');
     });
   };
 

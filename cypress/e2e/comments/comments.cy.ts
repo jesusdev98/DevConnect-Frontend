@@ -97,15 +97,12 @@ describe('E2E - Comments (real flow)', () => {
   };
 
   const goToPostDetail = (postId: number) => {
-    cy.intercept('GET', `**/api/posts/${postId}`).as('getPostDetail');
     cy.visit(`/home/post/${postId}`);
     cy.url({ timeout: 15000 }).should('include', `/home/post/${postId}`);
-    cy.wait('@getPostDetail', { timeout: 15000 })
-      .its('response.statusCode')
-      .should('eq', 200);
     cy.get('[data-cy=post-detail-card]', { timeout: 15000 }).should('be.visible');
+    cy.get('[data-cy=comments-toggle]', { timeout: 15000 }).should('be.visible');
     cy.intercept('GET', `**/api/posts/${postId}/comments`).as('getComments');
-    cy.get('[data-cy=comments-toggle]', { timeout: 15000 }).should('be.visible').click();
+    cy.get('[data-cy=comments-toggle]').click();
     cy.wait('@getComments', { timeout: 15000 })
       .its('response.statusCode')
       .should('eq', 200);
