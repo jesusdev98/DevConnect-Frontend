@@ -6,10 +6,12 @@ import { CreatePost } from './home/create-post/create-post';
 import { HomeFeed } from './home/home-feed/home-feed';
 import { HomeSuggestions } from './home/home-suggestions/home-suggestions';
 import { AUTH_PATHS } from './auth/auth-routes';
+import { ForgotPassword } from './forgot-password/forgot-password';
 import { LoginComponent } from './login/login';
 import { PostDetail } from './post-detail/post-detail';
 import { Profile } from './profile/profile';
 import { Register } from './register/register';
+import { ResetPassword } from './reset-password/reset-password';
 
 /**
  * Central route table for public auth pages and protected private areas.
@@ -25,6 +27,8 @@ const routes: Routes = [
   // Rutas publicas.
   { path: AUTH_PATHS.login, component: LoginComponent },
   { path: AUTH_PATHS.register, component: Register },
+  { path: AUTH_PATHS.forgotPassword, component: ForgotPassword },
+  { path: AUTH_PATHS.resetPassword, component: ResetPassword },
   { path: 'suggestions', redirectTo: 'home/suggestions', pathMatch: 'full' },
 
   // Ejemplo de ruta protegida con guard.

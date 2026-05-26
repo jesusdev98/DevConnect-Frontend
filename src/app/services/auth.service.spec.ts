@@ -52,6 +52,7 @@ describe('AuthService', () => {
     expect(loginCall.request.body).toEqual({
       identifier: 'usuario',
       password: 'Password@1',
+      remember: false,
     });
 
     loginCall.flush({

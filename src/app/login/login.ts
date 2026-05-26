@@ -1,7 +1,8 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectorRef, Component } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
+import { AUTH_ROUTES } from '../auth/auth-routes';
 import { AuthService } from '../services/auth.service';
 
 @Component({
@@ -18,18 +19,23 @@ import { AuthService } from '../services/auth.service';
  * - triggers the Laravel Sanctum login flow through AuthService.
  * - exposes loading and error state for accessibility-friendly feedback.
  */
-export class LoginComponent {
+export class LoginComponent implements OnInit {
   loginForm: FormGroup;
   isSubmitted = false;
   isLoading = false;
   loginErrorMessage = '';
   errorMessage = '';
   loginError = false;
+  showPassword = false;
+  rememberMe = false;
+  resetSuccessMessage = '';
+  readonly forgotPasswordRoute = AUTH_ROUTES.forgotPassword;
 
   constructor(
     private readonly fb: FormBuilder,
     private readonly authService: AuthService,
     private readonly router: Router,
+    private readonly route: ActivatedRoute,
     private readonly cdr: ChangeDetectorRef,
   ) {
     this.loginForm = this.fb.group({
@@ -42,6 +48,16 @@ export class LoginComponent {
    * Clears stale server-side banners as soon as the user edits the form again.
    * This keeps 401/422/429 feedback tied to the last submitted payload only.
    */
+  ngOnInit(): void {
+    if (this.route.snapshot.queryParamMap.get('reset') === 'ok') {
+      this.resetSuccessMessage = 'Contraseña restablecida correctamente. Ya podés iniciar sesión.';
+    }
+  }
+
+  togglePasswordVisibility(): void {
+    this.showPassword = !this.showPassword;
+  }
+
   clearSubmitState(): void {
     if (this.isSubmitted) {
       this.isSubmitted = false;
@@ -80,7 +96,7 @@ export class LoginComponent {
     const normalizedIdentifier = String(identifier ?? '').trim();
     this.isLoading = true;
 
-    this.authService.login(normalizedIdentifier, password).subscribe({
+    this.authService.login(normalizedIdentifier, password, this.rememberMe).subscribe({
       next: () => {
         this.isLoading = false;
         this.router.navigate(['/home']);

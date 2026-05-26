@@ -8,8 +8,10 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 
 import { AppRoutingModule } from './app-routing-module';
 import { App } from './app';
+import { ForgotPassword } from './forgot-password/forgot-password';
 import { LoginComponent } from './login/login';
 import { Register } from './register/register';
+import { ResetPassword } from './reset-password/reset-password';
 import { Profile } from './profile/profile';
 import { Home } from './home/home/home';
 import { CreatePost } from './home/create-post/create-post';
@@ -55,6 +57,8 @@ const hydrateAuthSession = (authService: AuthService): (() => Promise<unknown>) 
     App,
     LoginComponent,
     Register,
+    ForgotPassword,
+    ResetPassword,
     Profile,
     Home,
     CreatePost,

@@ -27,6 +27,8 @@ export class Register {
   validationMessage = '';
   registerErrorMessage = '';
   serverErrors: Record<string, string[]> = {};
+  showPassword = false;
+  showPasswordConfirm = false;
 
   constructor(
     private readonly fb: FormBuilder,
@@ -48,6 +50,14 @@ export class Register {
    * Any new keystroke invalidates the previous submit result so the user does
    * not keep seeing stale validation or server errors for an old payload.
    */
+  togglePasswordVisibility(): void {
+    this.showPassword = !this.showPassword;
+  }
+
+  togglePasswordConfirmVisibility(): void {
+    this.showPasswordConfirm = !this.showPasswordConfirm;
+  }
+
   clearSubmitState(): void {
     if (this.isSubmitted) {
       this.isSubmitted = false;

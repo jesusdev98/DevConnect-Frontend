@@ -28,6 +28,10 @@
           </p>
         </div>
 
+        <div class="msg-success" role="alert" [hidden]="!resetSuccessMessage">
+          {{ resetSuccessMessage }}
+        </div>
+
         <form data-cy="login-form" [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form" novalidate>
           <div class="form-group">
             <label for="identifier">Email o usuario</label>
@@ -51,22 +55,55 @@
 
           <div class="form-group">
             <label for="password">Contraseña</label>
-            <input
-              id="password"
-              type="password"
-              formControlName="password"
-              data-cy="login-password"
-              placeholder="Introduce tu contraseña"
-              autocomplete="current-password"
-              [attr.aria-invalid]="isSubmitted && loginForm.get('password')?.invalid ? 'true' : 'false'"
-              (input)="clearSubmitState()"
-            />
+            <div class="password-wrapper">
+              <input
+                id="password"
+                [type]="showPassword ? 'text' : 'password'"
+                formControlName="password"
+                data-cy="login-password"
+                placeholder="Introduce tu contraseña"
+                autocomplete="current-password"
+                [attr.aria-invalid]="isSubmitted && loginForm.get('password')?.invalid ? 'true' : 'false'"
+                (input)="clearSubmitState()"
+              />
+              <button
+                type="button"
+                class="password-toggle"
+                (click)="togglePasswordVisibility()"
+                [attr.aria-label]="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+              >
+                <svg *ngIf="showPassword" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+                <svg *ngIf="!showPassword" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
+                  <line x1="1" y1="1" x2="23" y2="23"/>
+                </svg>
+              </button>
+            </div>
             <small class="error" *ngIf="isSubmitted && loginForm.get('password')?.errors?.['required']">
               Este campo es obligatorio.
             </small>
             <small class="error" *ngIf="isSubmitted && (loginForm.get('password')?.errors?.['minlength'] || loginForm.get('password')?.errors?.['maxlength'])">
               La contraseña debe tener entre 8 y 255 caracteres.
             </small>
+          </div>
+
+          <div class="forgot-row">
+            <a [routerLink]="forgotPasswordRoute" class="forgot-link">¿Olvidaste tu contraseña?</a>
+          </div>
+
+          <div class="remember-row">
+            <label class="remember-toggle">
+              <input
+                type="checkbox"
+                [(ngModel)]="rememberMe"
+                [ngModelOptions]="{standalone: true}"
+                data-cy="login-remember"
+              />
+              <span class="remember-label">Recordar sesión</span>
+            </label>
           </div>
 
           <div

@@ -1,8 +1,8 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ReactiveFormsModule } from '@angular/forms';
-import { Router, provideRouter } from '@angular/router';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { Router, RouterModule, provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
 import { Mock, vi } from 'vitest';
 import { LoginComponent } from './login';
@@ -21,7 +21,7 @@ describe('LoginComponent', () => {
 
     await TestBed.configureTestingModule({
       declarations: [LoginComponent],
-      imports: [CommonModule, ReactiveFormsModule],
+      imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterModule],
       providers: [
         { provide: AuthService, useValue: authServiceMock },
         provideRouter([]),
@@ -59,7 +59,7 @@ describe('LoginComponent', () => {
 
     component.onSubmit();
 
-    expect(authServiceMock.login).toHaveBeenCalledWith('admin', 'Password@1');
+    expect(authServiceMock.login).toHaveBeenCalledWith('admin', 'Password@1', false);
     expect(component.isLoading).toBe(false);
     expect(navigateSpy).toHaveBeenCalledWith(['/home']);
   });

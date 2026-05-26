@@ -106,7 +106,7 @@ export class AuthService {
    * Logs in against the Laravel session guard and hydrates in-memory user
    * state from the response, falling back to /auth/me if necessary.
    */
-  login(identifier: string, password: string): Observable<AuthUser> {
+  login(identifier: string, password: string, remember = false): Observable<AuthUser> {
     if (this.loginInFlight$) {
       return this.loginInFlight$;
     }
@@ -124,7 +124,7 @@ export class AuthService {
     this.loginInFlight$ = this.csrf().pipe(
       switchMap(() => {
         this.logDebug('login:post:start', { url });
-        return this.http.post<unknown>(url, { identifier: normalizedIdentifier, password }, {
+        return this.http.post<unknown>(url, { identifier: normalizedIdentifier, password, remember }, {
           withCredentials: true,
         }).pipe(
           tap(() => this.logDebug('login:post:success', { url })),
@@ -321,6 +321,30 @@ export class AuthService {
         this.http.post(`${environment.apiUrl}/api/auth/change-password`, payload, {
           withCredentials: true,
         }),
+      ),
+    );
+  }
+
+  forgotUsername(email: string): Observable<unknown> {
+    return this.csrf().pipe(
+      switchMap(() =>
+        this.http.post(this.buildApiUrl('/api/auth/forgot-username'), { email }, { withCredentials: true }),
+      ),
+    );
+  }
+
+  forgotPassword(email: string): Observable<unknown> {
+    return this.csrf().pipe(
+      switchMap(() =>
+        this.http.post(this.buildApiUrl('/api/auth/forgot-password'), { email }, { withCredentials: true }),
+      ),
+    );
+  }
+
+  resetPassword(payload: { token: string; email: string; password: string; password_confirmation: string }): Observable<unknown> {
+    return this.csrf().pipe(
+      switchMap(() =>
+        this.http.post(this.buildApiUrl('/api/auth/reset-password'), payload, { withCredentials: true }),
       ),
     );
   }
