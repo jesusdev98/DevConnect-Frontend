@@ -21,6 +21,8 @@ import { TagCatalogService, TagCategory } from '../../services/tag-catalog.servi
  */
 export class CreatePost implements OnInit {
   private static readonly MAX_TAGS = 15;
+  private static readonly MAX_CONTENT_LENGTH = 1500;
+  private static readonly CONTENT_MAX_ERROR = 'maxlength';
 
   form: FormGroup;
   isSubmitting = false;
@@ -33,6 +35,7 @@ export class CreatePost implements OnInit {
   private editOrigin: 'home' | 'detail' | 'profile' = 'detail';
   private editFromProfileRoute: string | null = null;
   private editPostSnapshot: Post | null = null;
+  readonly maxContentLength = CreatePost.MAX_CONTENT_LENGTH;
   // Guardamos IDs en Set para evitar duplicados de forma natural.
   selectedTagIds = new Set<number>();
 
@@ -47,7 +50,7 @@ export class CreatePost implements OnInit {
   ) {
     this.form = this.fb.group({
       title: ['', [Validators.required, Validators.minLength(5)]],
-      content: ['', [Validators.required, Validators.minLength(20)]],
+      content: ['', [Validators.required, Validators.minLength(20), Validators.maxLength(CreatePost.MAX_CONTENT_LENGTH)]],
     });
   }
 
@@ -84,11 +87,24 @@ export class CreatePost implements OnInit {
   onSubmit(): void {
     this.errorMsg = '';
     const title = this.form.value.title;
-    const content = this.form.value.content;
+    const content = typeof this.form.value.content === 'string' ? this.form.value.content : '';
 
     // Si hay errores de validación, mostramos mensajes y paramos.
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      return;
+    }
+
+    if (this.isContentTooLong(content)) {
+      this.form.get('content')?.setErrors({
+        [CreatePost.CONTENT_MAX_ERROR]: {
+          requiredLength: CreatePost.MAX_CONTENT_LENGTH,
+          actualLength: content.length,
+        },
+      });
+      this.form.get('content')?.markAsTouched();
+      this.errorMsg = `El contenido no puede superar ${CreatePost.MAX_CONTENT_LENGTH} caracteres.`;
+      this.refreshView();
       return;
     }
 
@@ -180,6 +196,20 @@ export class CreatePost implements OnInit {
     return this.resolvePostEditReturnTarget();
   }
 
+  onContentInput(event: Event): void {
+    const value = (event.target as HTMLTextAreaElement | null)?.value ?? '';
+    if (!this.isContentTooLong(value)) {
+      return;
+    }
+
+    this.form.get('content')?.setErrors({
+      [CreatePost.CONTENT_MAX_ERROR]: {
+        requiredLength: CreatePost.MAX_CONTENT_LENGTH,
+        actualLength: value.length,
+      },
+    });
+  }
+
   /**
    * Obtiene categorías y tags desde el catálogo del backend.
    */
@@ -225,6 +255,10 @@ export class CreatePost implements OnInit {
    */
   private refreshView(): void {
     this.cdr.detectChanges();
+  }
+
+  private isContentTooLong(content: string): boolean {
+    return content.length > CreatePost.MAX_CONTENT_LENGTH;
   }
 
   private loadPostForEdit(postId: number): void {

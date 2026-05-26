@@ -17,10 +17,13 @@
     <textarea
       id="post-content"
       formControlName="content"
+      [maxLength]="maxContentLength"
+      (input)="onContentInput($event)"
       placeholder="Escribe tu publicación..."
     ></textarea>
     <p class="error" *ngIf="form.get('content')?.touched && form.get('content')?.invalid && form.get('content')?.errors?.['required']">El contenido es obligatorio.</p>
     <p class="error" *ngIf="form.get('content')?.touched && form.get('content')?.invalid && form.get('content')?.errors?.['minlength']">Mínimo 20 caracteres.</p>
+    <p class="error" *ngIf="form.get('content')?.touched && form.get('content')?.invalid && form.get('content')?.errors?.['maxlength']">El contenido no puede superar {{ maxContentLength }} caracteres.</p>
 
     <div class="tags-header">
       <label>Tags por categoría</label>

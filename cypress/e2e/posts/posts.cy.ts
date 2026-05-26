@@ -157,6 +157,28 @@ describe('E2E - Posts (mocked API)', () => {
     cy.get('.error-global').should('be.visible').and('contain.text', 'titulo ya existe');
   });
 
+  it('blocks submit in client when content exceeds the maximum length', () => {
+    let createRequestCount = 0;
+
+    cy.intercept('POST', '**/api/posts', () => {
+      createRequestCount += 1;
+    }).as('createPost');
+
+    cy.visit('/home/create-post');
+    cy.waitForPostsBootstrap();
+
+    cy.get('#post-title').clear().type('Titulo dentro de limite');
+    cy.get('#post-content')
+      .invoke('val', 'a'.repeat(1501))
+      .trigger('input');
+
+    cy.contains('button[type="submit"]', 'Publicar').click();
+    cy.get('.error').should('contain.text', '1500');
+    cy.then(() => {
+      expect(createRequestCount).to.eq(0);
+    });
+  });
+
   it('requests filtered feed with tag_ids[] and match when a tag is selected', () => {
     const filteredPost = buildMockPost({
       id: 500,
