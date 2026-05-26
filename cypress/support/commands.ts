@@ -541,8 +541,9 @@ Cypress.Commands.add('openProfileAccountTab', (): Cypress.Chainable<void> => {
  * Completa y envía el formulario de creación de post desde la UI.
  */
 Cypress.Commands.add('createPostByUI', (payload: CreatePostUiPayload): Cypress.Chainable<void> => {
-  cy.get('#post-title').clear().type(payload.title);
-  cy.get('#post-content').clear().type(payload.content);
+  cy.get('section.create-post-page').should('be.visible');
+  cy.get('#post-title').clear().type(payload.title).should('have.value', payload.title);
+  cy.get('#post-content').clear().type(payload.content).should('have.value', payload.content);
 
   if (payload.tagName !== undefined) {
     cy.get('section.create-post-page')
@@ -551,7 +552,11 @@ Cypress.Commands.add('createPostByUI', (payload: CreatePostUiPayload): Cypress.C
       .check({ force: true });
   }
 
-  cy.get('section.create-post-page').contains('button[type="submit"]', 'Publicar').click();
+  cy.get('section.create-post-page')
+    .contains('button[type="submit"]', 'Publicar')
+    .should('be.visible')
+    .and('not.be.disabled')
+    .click();
 
   return cy.wrap(null, { log: false }).then(() => undefined);
 });

@@ -112,6 +112,7 @@ describe('E2E - Comments (real flow)', () => {
     });
 
     cy.get('[data-cy=comments-panel]', { timeout: 15000 }).should('be.visible');
+    cy.get('[data-cy=comments-panel] .comments-loading', { timeout: 15000 }).should('not.exist');
     cy.get('[data-cy=comment-input]', { timeout: 15000 }).should('be.visible');
   };
 
@@ -128,6 +129,7 @@ describe('E2E - Comments (real flow)', () => {
       .click();
     cy.wait('@createCommentMutation', { timeout: 15000 }).then((interception) => {
       const pathname = new URL(interception.request.url).pathname.replace(/\/$/, '');
+      cy.task('log', `[createCommentMutation] ${interception.request.method} ${interception.request.url} -> ${interception.response?.statusCode ?? 'NO_RESPONSE'}`, { log: false });
       expect(pathname, 'comment create endpoint').to.match(/^\/api\/posts\/\d+\/comments$/);
       expect(interception.response?.statusCode, 'comment create status').to.eq(201);
     });

@@ -37,15 +37,18 @@ describe('E2E - Likes (real flow)', () => {
 
   const createPostAndOpenDetail = (title: string, content: string) => {
     cy.visit('/home/create-post');
-    cy.get('[data-cy=home-root]').should('be.visible');
-    cy.intercept('POST', '**/api/posts').as('createPost');
+    cy.get('section.create-post-page', { timeout: 15000 }).should('be.visible');
+    cy.intercept('POST', '**/api/**').as('createPostMutation');
     cy.createPostByUI({
       title,
       content,
       tagName: 'Angular',
     });
 
-    cy.wait('@createPost', { timeout: 15000 }).then((interception) => {
+    cy.wait('@createPostMutation', { timeout: 15000 }).then((interception) => {
+      const pathname = new URL(interception.request.url).pathname.replace(/\/$/, '');
+      cy.task('log', `[createPostMutation] ${interception.request.method} ${interception.request.url} -> ${interception.response?.statusCode ?? 'NO_RESPONSE'}`, { log: false });
+      expect(pathname, 'post create endpoint').to.eq('/api/posts');
       expect(interception.response?.statusCode, 'create post status').to.eq(201);
       const postId = interception.response?.body?.data?.id;
       expect(postId, 'created post id').to.be.a('number').and.be.greaterThan(0);
@@ -66,11 +69,30 @@ describe('E2E - Likes (real flow)', () => {
     });
 
     cy.get('[data-cy=comments-panel]', { timeout: 15000 }).should('be.visible');
+    cy.get('[data-cy=comments-panel] .comments-loading', { timeout: 15000 }).should('not.exist');
     cy.get('[data-cy=comment-input]', { timeout: 15000 }).should('be.visible');
   };
 
   const getPostLikeCount = () => {
     return cy.get('[data-cy=post-like-button] .like-count').invoke('text').then((text) => Number.parseInt(text.trim(), 10));
+  };
+
+  const waitForPostLikeToggle = () => {
+    cy.wait('@togglePostLikeMutation', { timeout: 15000 }).then((interception) => {
+      const pathname = new URL(interception.request.url).pathname.replace(/\/$/, '');
+      cy.task('log', `[togglePostLikeMutation] ${interception.request.method} ${interception.request.url} -> ${interception.response?.statusCode ?? 'NO_RESPONSE'}`, { log: false });
+      expect(pathname, 'post like endpoint').to.match(/^\/api\/posts\/\d+\/likes\/toggle$/);
+      expect(interception.response?.statusCode, 'post like status').to.eq(200);
+    });
+  };
+
+  const waitForCommentLikeToggle = () => {
+    cy.wait('@toggleCommentLikeMutation', { timeout: 15000 }).then((interception) => {
+      const pathname = new URL(interception.request.url).pathname.replace(/\/$/, '');
+      cy.task('log', `[toggleCommentLikeMutation] ${interception.request.method} ${interception.request.url} -> ${interception.response?.statusCode ?? 'NO_RESPONSE'}`, { log: false });
+      expect(pathname, 'comment like endpoint').to.match(/^\/api\/comments\/\d+\/likes\/toggle$/);
+      expect(interception.response?.statusCode, 'comment like status').to.eq(200);
+    });
   };
 
   beforeEach(() => {
@@ -88,9 +110,9 @@ describe('E2E - Likes (real flow)', () => {
     loginAsUser(user);
     createPostAndOpenDetail(postTitle, postContent);
 
-    cy.intercept('POST', '**/api/posts/*/likes/toggle').as('togglePostLike');
+    cy.intercept('POST', '**/api/**').as('togglePostLikeMutation');
     cy.get('[data-cy=post-like-button]').should('be.visible').and('not.have.class', 'liked').click();
-    cy.wait('@togglePostLike', { timeout: 15000 }).its('response.statusCode').should('eq', 200);
+    waitForPostLikeToggle();
     cy.get('[data-cy=post-like-button]').should('have.class', 'liked');
   });
 
@@ -103,12 +125,12 @@ describe('E2E - Likes (real flow)', () => {
     loginAsUser(user);
     createPostAndOpenDetail(postTitle, postContent);
 
-    cy.intercept('POST', '**/api/posts/*/likes/toggle').as('togglePostLike');
-    cy.get('[data-cy=post-like-button]').click();
-    cy.wait('@togglePostLike', { timeout: 15000 }).its('response.statusCode').should('eq', 200);
+    cy.intercept('POST', '**/api/**').as('togglePostLikeMutation');
+    cy.get('[data-cy=post-like-button]').should('be.visible').click();
+    waitForPostLikeToggle();
     cy.get('[data-cy=post-like-button]').should('have.class', 'liked');
-    cy.get('[data-cy=post-like-button]').click();
-    cy.wait('@togglePostLike', { timeout: 15000 }).its('response.statusCode').should('eq', 200);
+    cy.get('[data-cy=post-like-button]').should('be.visible').click();
+    waitForPostLikeToggle();
     cy.get('[data-cy=post-like-button]').should('not.have.class', 'liked');
   });
 
@@ -132,15 +154,16 @@ describe('E2E - Likes (real flow)', () => {
     cy.get('[data-cy=comment-submit]').should('be.visible').and('not.be.disabled').click();
     cy.wait('@createCommentMutation', { timeout: 15000 }).then((interception) => {
       const pathname = new URL(interception.request.url).pathname.replace(/\/$/, '');
+      cy.task('log', `[createCommentMutation] ${interception.request.method} ${interception.request.url} -> ${interception.response?.statusCode ?? 'NO_RESPONSE'}`, { log: false });
       expect(pathname, 'comment create endpoint').to.match(/^\/api\/posts\/\d+\/comments$/);
       expect(interception.response?.statusCode, 'comment create status').to.eq(201);
     });
     cy.contains('[data-cy=comments-list] .comment-item-text', commentText, { timeout: 15000 }).should('be.visible');
 
     cy.contains('li.comment-item', commentText).within(() => {
-      cy.intercept('POST', '**/api/comments/*/likes/toggle').as('toggleCommentLike');
+      cy.intercept('POST', '**/api/**').as('toggleCommentLikeMutation');
       cy.get('[data-cy=comment-like-button]').first().should('be.visible').and('not.have.class', 'liked').click();
-      cy.wait('@toggleCommentLike', { timeout: 15000 }).its('response.statusCode').should('eq', 200);
+      waitForCommentLikeToggle();
       cy.get('[data-cy=comment-like-button]').first().should('have.class', 'liked');
     });
   });
@@ -155,16 +178,16 @@ describe('E2E - Likes (real flow)', () => {
     createPostAndOpenDetail(postTitle, postContent);
 
     getPostLikeCount().then((initialCount) => {
-      cy.intercept('POST', '**/api/posts/*/likes/toggle').as('togglePostLike');
-      cy.get('[data-cy=post-like-button]').click();
-      cy.wait('@togglePostLike', { timeout: 15000 }).its('response.statusCode').should('eq', 200);
+      cy.intercept('POST', '**/api/**').as('togglePostLikeMutation');
+      cy.get('[data-cy=post-like-button]').should('be.visible').click();
+      waitForPostLikeToggle();
       cy.get('[data-cy=post-like-button]').should('have.class', 'liked');
       cy.get('[data-cy=post-like-button] .like-count').invoke('text').then((text) => {
         expect(text.trim()).to.eq(`${initialCount + 1}`);
       });
 
-      cy.get('[data-cy=post-like-button]').click();
-      cy.wait('@togglePostLike', { timeout: 15000 }).its('response.statusCode').should('eq', 200);
+      cy.get('[data-cy=post-like-button]').should('be.visible').click();
+      waitForPostLikeToggle();
       cy.get('[data-cy=post-like-button]').should('not.have.class', 'liked');
       cy.get('[data-cy=post-like-button] .like-count').invoke('text').then((text) => {
         expect(text.trim()).to.eq(`${initialCount}`);
