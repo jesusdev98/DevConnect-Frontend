@@ -12,6 +12,8 @@ export default defineConfig({
     env: {
       backendUrl: 'http://127.0.0.1:8001',
       adminSeedCommand: '',
+      adminEmail: 'admin@devconnect.com',
+      adminPassword: 'Rt9@kV2xQa',
     },
     specPattern: 'cypress/e2e/**/*.cy.{js,ts}',
     supportFile: 'cypress/support/e2e.ts',
