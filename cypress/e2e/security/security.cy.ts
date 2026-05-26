@@ -124,10 +124,18 @@ describe('E2E - Security edge cases (real flow)', () => {
       openPostDetail(postId, postTitle);
 
       openCommentsPanel();
-      cy.intercept('POST', '**/api/posts/*/comments').as('createComment');
-      cy.get('[data-cy=comment-input]').should('be.visible').clear().type(commentText);
-      cy.get('[data-cy=comment-submit]').click();
-      cy.wait('@createComment', { timeout: 15000 }).its('response.statusCode').should('eq', 201);
+      cy.intercept('POST', '**/api/**').as('createCommentMutation');
+      cy.get('[data-cy=comment-input]')
+        .should('be.visible')
+        .clear()
+        .type(commentText)
+        .should('have.value', commentText);
+      cy.get('[data-cy=comment-submit]').should('be.visible').and('not.be.disabled').click();
+      cy.wait('@createCommentMutation', { timeout: 15000 }).then((interception) => {
+        const pathname = new URL(interception.request.url).pathname.replace(/\/$/, '');
+        expect(pathname, 'comment create endpoint').to.match(/^\/api\/posts\/\d+\/comments$/);
+        expect(interception.response?.statusCode, 'comment create status').to.eq(201);
+      });
       cy.contains('[data-cy=comments-list] .comment-item-text', commentText, { timeout: 15000 }).should('be.visible');
 
       cy.resetAuthState();
