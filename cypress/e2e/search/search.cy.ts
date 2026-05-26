@@ -36,7 +36,23 @@ describe('E2E - Search (real flow)', () => {
   };
 
   const typeSearch = (value: string) => {
-    cy.get('input.search-input', { timeout: 15000 }).should('be.visible').clear().type(value);
+    cy.get('input.search-input', { timeout: 15000 })
+      .scrollIntoView()
+      .should('be.visible')
+      .clear()
+      .type(value)
+      .should('have.value', value);
+  };
+
+  const getVisibleSearchSuggestion = (username: string) => {
+    cy.get('ul.search-dropdown', { timeout: 15000 })
+      .scrollIntoView()
+      .should('be.visible');
+
+    return cy
+      .contains('li.search-suggestion', `@${username}`, { timeout: 15000 })
+      .scrollIntoView()
+      .should('be.visible');
   };
 
   beforeEach(() => {
@@ -55,8 +71,10 @@ describe('E2E - Search (real flow)', () => {
 
     typeSearch(`@${target.usuario}`);
 
-    cy.get('ul.search-dropdown', { timeout: 15000 }).should('be.visible');
-    cy.contains('li.search-suggestion .suggestion-username', `@${target.usuario}`).should('be.visible');
+    getVisibleSearchSuggestion(target.usuario)
+      .find('.suggestion-username')
+      .should('be.visible')
+      .and('contain.text', `@${target.usuario}`);
   });
 
   it('shows autocomplete suggestions with partial @query', () => {
@@ -70,11 +88,16 @@ describe('E2E - Search (real flow)', () => {
 
     typeSearch(`@${partialQuery}`);
 
-    cy.get('ul.search-dropdown', { timeout: 15000 }).should('be.visible');
+    cy.get('ul.search-dropdown', { timeout: 15000 })
+      .scrollIntoView()
+      .should('be.visible');
     cy.get('li.search-suggestion').should(($items) => {
       expect($items.length).to.be.greaterThan(0);
     });
-    cy.contains('li.search-suggestion .suggestion-username', `@${target.usuario}`).should('be.visible');
+    getVisibleSearchSuggestion(target.usuario)
+      .find('.suggestion-username')
+      .should('be.visible')
+      .and('contain.text', `@${target.usuario}`);
   });
 
   it('navigates to profile from search suggestions', () => {
@@ -86,9 +109,11 @@ describe('E2E - Search (real flow)', () => {
     loginAsUser(actor);
 
     typeSearch(`@${target.usuario}`);
-    cy.get('ul.search-dropdown', { timeout: 15000 }).should('be.visible');
+    cy.get('ul.search-dropdown', { timeout: 15000 })
+      .scrollIntoView()
+      .should('be.visible');
 
-    cy.contains('li.search-suggestion', `@${target.usuario}`).trigger('mousedown');
+    getVisibleSearchSuggestion(target.usuario).trigger('mousedown');
 
     cy.url({ timeout: 15000 }).should('include', `/profile/${target.usuario}`);
     cy.get('[data-cy=profile-root]').should('be.visible');

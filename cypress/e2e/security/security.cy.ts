@@ -37,15 +37,17 @@ describe('E2E - Security edge cases (real flow)', () => {
 
   const createPostAsCurrentUser = (title: string, content: string): Cypress.Chainable<number> => {
     cy.visit('/home/create-post');
-    cy.get('[data-cy=home-root]').should('be.visible');
-    cy.intercept('POST', '**/api/posts').as('createPost');
+    cy.get('section.create-post-page', { timeout: 15000 }).should('be.visible');
     cy.createPostByUI({
       title,
       content,
       tagName: 'Angular',
     });
 
-    return cy.wait('@createPost', { timeout: 15000 }).then((interception) => {
+    return cy.wait('@contentCreatePost', { timeout: 15000 }).then((interception) => {
+      const pathname = new URL(interception.request.url).pathname.replace(/\/$/, '');
+      cy.task('log', `[contentCreatePost] ${interception.request.method} ${interception.request.url} -> ${interception.response?.statusCode ?? 'NO_RESPONSE'}`, { log: false });
+      expect(pathname, 'post create endpoint').to.eq('/api/posts');
       expect(interception.response?.statusCode, 'create post status').to.eq(201);
       const postId = interception.response?.body?.data?.id;
       expect(postId, 'created post id').to.be.a('number').and.be.greaterThan(0);
@@ -69,6 +71,7 @@ describe('E2E - Security edge cases (real flow)', () => {
     });
 
     cy.get('[data-cy=comments-panel]', { timeout: 15000 }).should('be.visible');
+    cy.get('[data-cy=comments-panel] .comments-loading', { timeout: 15000 }).should('not.exist');
     cy.get('[data-cy=comment-input]', { timeout: 15000 }).should('be.visible');
   };
 
@@ -124,15 +127,15 @@ describe('E2E - Security edge cases (real flow)', () => {
       openPostDetail(postId, postTitle);
 
       openCommentsPanel();
-      cy.intercept('POST', '**/api/**').as('createCommentMutation');
       cy.get('[data-cy=comment-input]')
         .should('be.visible')
         .clear()
         .type(commentText)
         .should('have.value', commentText);
       cy.get('[data-cy=comment-submit]').should('be.visible').and('not.be.disabled').click();
-      cy.wait('@createCommentMutation', { timeout: 15000 }).then((interception) => {
+      cy.wait('@contentCreateComment', { timeout: 15000 }).then((interception) => {
         const pathname = new URL(interception.request.url).pathname.replace(/\/$/, '');
+        cy.task('log', `[contentCreateComment] ${interception.request.method} ${interception.request.url} -> ${interception.response?.statusCode ?? 'NO_RESPONSE'}`, { log: false });
         expect(pathname, 'comment create endpoint').to.match(/^\/api\/posts\/\d+\/comments$/);
         expect(interception.response?.statusCode, 'comment create status').to.eq(201);
       });
