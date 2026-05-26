@@ -35,23 +35,40 @@ describe('E2E - Saved posts (real flow)', () => {
     cy.get('[data-cy=home-root]').should('be.visible');
   };
 
-  const createPostByUi = (title: string, content: string) => {
+  const createPostByUi = (title: string, content: string): Cypress.Chainable<number> => {
     cy.visit('/home/create-post');
     cy.get('[data-cy=home-root]').should('be.visible');
+    cy.intercept('POST', '**/api/posts').as('createPost');
     cy.createPostByUI({
       title,
       content,
       tagName: 'Angular',
     });
-    cy.url({ timeout: 15000 }).should('include', '/home');
-    cy.contains('article.post-item h3', title, { timeout: 15000 }).should('be.visible');
+
+    return cy.wait('@createPost', { timeout: 15000 }).then((interception) => {
+      expect(interception.response?.statusCode, 'create post status').to.eq(201);
+      const postId = interception.response?.body?.data?.id;
+      expect(postId, 'created post id').to.be.a('number').and.be.greaterThan(0);
+
+      return postId as number;
+    });
   };
 
-  const savePostFromFeed = (title: string) => {
-    cy.contains('article.post-item', title).as('targetPost');
-    cy.get('@targetPost').find('h3[tabindex="0"]').focus();
-    cy.get('@targetPost').find('button.bookmark-btn').first().click();
-    cy.get('@targetPost').find('button.bookmark-btn').first().should('have.class', 'is-saved');
+  const openPostDetail = (postId: number, title: string) => {
+    cy.visit(`/home/post/${postId}`);
+    cy.url({ timeout: 15000 }).should('include', `/home/post/${postId}`);
+    cy.get('[data-cy=post-detail-card]', { timeout: 15000 }).should('be.visible');
+    cy.get('[data-cy=post-title]').should('contain.text', title);
+  };
+
+  const savePostFromDetail = () => {
+    cy.get('[data-cy=post-detail-card] button.bookmark-btn', { timeout: 15000 })
+      .first()
+      .should('be.visible')
+      .click();
+    cy.get('[data-cy=post-detail-card] button.bookmark-btn')
+      .first()
+      .should('have.class', 'is-saved');
   };
 
   const openSavedTabInProfile = () => {
@@ -66,15 +83,17 @@ describe('E2E - Saved posts (real flow)', () => {
     cy.visit('/login');
   });
 
-  it('saves a post from feed', () => {
+  it('saves a post from post detail', () => {
     const user = buildUniqueUser('saved_create');
     const postTitle = `Post guardado ${Date.now()}`;
     const postContent = `Contenido para guardado ${Date.now()} con longitud suficiente.`;
 
     registerTestUser(user);
     loginAsUser(user);
-    createPostByUi(postTitle, postContent);
-    savePostFromFeed(postTitle);
+    createPostByUi(postTitle, postContent).then((postId) => {
+      openPostDetail(postId, postTitle);
+      savePostFromDetail();
+    });
   });
 
   it('shows saved posts in profile tab', () => {
@@ -84,9 +103,11 @@ describe('E2E - Saved posts (real flow)', () => {
 
     registerTestUser(user);
     loginAsUser(user);
-    createPostByUi(postTitle, postContent);
-    savePostFromFeed(postTitle);
-    openSavedTabInProfile();
+    createPostByUi(postTitle, postContent).then((postId) => {
+      openPostDetail(postId, postTitle);
+      savePostFromDetail();
+      openSavedTabInProfile();
+    });
 
     cy.contains('.posts-grid .post-card-link', postTitle, { timeout: 15000 }).should('be.visible');
   });
@@ -98,9 +119,11 @@ describe('E2E - Saved posts (real flow)', () => {
 
     registerTestUser(user);
     loginAsUser(user);
-    createPostByUi(postTitle, postContent);
-    savePostFromFeed(postTitle);
-    openSavedTabInProfile();
+    createPostByUi(postTitle, postContent).then((postId) => {
+      openPostDetail(postId, postTitle);
+      savePostFromDetail();
+      openSavedTabInProfile();
+    });
 
     cy.contains('.posts-grid .post-card', postTitle).as('savedPostCard');
     cy.get('@savedPostCard').find('button.post-card-link').focus();

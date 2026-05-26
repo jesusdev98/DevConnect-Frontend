@@ -35,22 +35,37 @@ describe('E2E - Security edge cases (real flow)', () => {
     cy.get('[data-cy=home-root]').should('be.visible');
   };
 
-  const createPostAsCurrentUser = (title: string, content: string) => {
+  const createPostAsCurrentUser = (title: string, content: string): Cypress.Chainable<number> => {
     cy.visit('/home/create-post');
     cy.get('[data-cy=home-root]').should('be.visible');
+    cy.intercept('POST', '**/api/posts').as('createPost');
     cy.createPostByUI({
       title,
       content,
       tagName: 'Angular',
     });
-    cy.url({ timeout: 15000 }).should('include', '/home');
-    cy.contains('article.post-item h3', title, { timeout: 15000 }).should('be.visible');
+
+    return cy.wait('@createPost', { timeout: 15000 }).then((interception) => {
+      expect(interception.response?.statusCode, 'create post status').to.eq(201);
+      const postId = interception.response?.body?.data?.id;
+      expect(postId, 'created post id').to.be.a('number').and.be.greaterThan(0);
+
+      return postId as number;
+    });
   };
 
-  const openPostDetailFromFeed = (title: string) => {
-    cy.contains('article.post-item h3', title, { timeout: 15000 }).should('be.visible').click();
-    cy.url({ timeout: 15000 }).should('include', '/home/post/');
-    cy.get('.post-detail-page').should('be.visible');
+  const openPostDetail = (postId: number, title: string) => {
+    cy.visit(`/home/post/${postId}`);
+    cy.url({ timeout: 15000 }).should('include', `/home/post/${postId}`);
+    cy.get('[data-cy=post-detail-card]', { timeout: 15000 }).should('be.visible');
+    cy.get('[data-cy=post-title]').should('contain.text', title);
+  };
+
+  const openCommentsPanel = () => {
+    cy.intercept('GET', '**/api/posts/*/comments').as('getComments');
+    cy.get('[data-cy=comments-toggle]', { timeout: 15000 }).should('be.visible').click();
+    cy.wait('@getComments', { timeout: 15000 }).its('response.statusCode').should('eq', 200);
+    cy.get('[data-cy=comments-panel]', { timeout: 15000 }).should('be.visible');
   };
 
   beforeEach(() => {
@@ -81,13 +96,13 @@ describe('E2E - Security edge cases (real flow)', () => {
     registerTestUser(otherUser);
 
     loginAsUser(authorUser);
-    createPostAsCurrentUser(postTitle, postContent);
+    createPostAsCurrentUser(postTitle, postContent).then((postId) => {
+      cy.resetAuthState();
+      loginAsUser(otherUser);
 
-    cy.resetAuthState();
-    loginAsUser(otherUser);
-
-    openPostDetailFromFeed(postTitle);
-    cy.get('button.edit-btn').should('not.exist');
+      openPostDetail(postId, postTitle);
+      cy.get('button.edit-btn').should('not.exist');
+    });
   });
 
   it('does not show delete comment action for a different user', () => {
@@ -101,23 +116,24 @@ describe('E2E - Security edge cases (real flow)', () => {
     registerTestUser(otherUser);
 
     loginAsUser(authorUser);
-    createPostAsCurrentUser(postTitle, postContent);
-    openPostDetailFromFeed(postTitle);
+    createPostAsCurrentUser(postTitle, postContent).then((postId) => {
+      openPostDetail(postId, postTitle);
 
-    cy.get('button.comments-toggle', { timeout: 15000 }).should('be.visible').click();
-    cy.get('.comments-panel', { timeout: 15000 }).should('be.visible');
-    cy.get('.comments-form-section textarea').should('be.visible').clear().type(commentText);
-    cy.contains('.comment-form-actions button', 'Enviar').click();
-    cy.contains('li.comment-item .comment-item-text', commentText, { timeout: 15000 }).should('be.visible');
+      openCommentsPanel();
+      cy.intercept('POST', '**/api/posts/*/comments').as('createComment');
+      cy.get('[data-cy=comment-input]').should('be.visible').clear().type(commentText);
+      cy.get('[data-cy=comment-submit]').click();
+      cy.wait('@createComment', { timeout: 15000 }).its('response.statusCode').should('eq', 201);
+      cy.contains('[data-cy=comments-list] .comment-item-text', commentText, { timeout: 15000 }).should('be.visible');
 
-    cy.resetAuthState();
-    loginAsUser(otherUser);
-    openPostDetailFromFeed(postTitle);
-    cy.get('button.comments-toggle', { timeout: 15000 }).should('be.visible').click();
-    cy.get('.comments-panel', { timeout: 15000 }).should('be.visible');
+      cy.resetAuthState();
+      loginAsUser(otherUser);
+      openPostDetail(postId, postTitle);
+      openCommentsPanel();
 
-    cy.contains('li.comment-item', commentText).within(() => {
-      cy.get('button.delete-comment-btn').should('not.exist');
+      cy.contains('li.comment-item', commentText).within(() => {
+        cy.get('button.delete-comment-btn').should('not.exist');
+      });
     });
   });
 });
