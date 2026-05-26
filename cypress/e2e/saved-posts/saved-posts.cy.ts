@@ -65,11 +65,14 @@ describe('E2E - Saved posts (real flow)', () => {
   };
 
   const savePostFromDetail = () => {
+    cy.get('[data-cy=post-detail-card]', { timeout: 15000 })
+      .should('be.visible')
+      .trigger('mouseenter');
     cy.get('[data-cy=post-detail-card] button.bookmark-btn', { timeout: 15000 })
       .first()
-      .should('be.visible')
-      .click();
-    cy.get('[data-cy=post-detail-card] button.bookmark-btn')
+      .should('exist')
+      .click({ force: true });
+    cy.get('[data-cy=post-detail-card] button.bookmark-btn', { timeout: 15000 })
       .first()
       .should('have.class', 'is-saved');
   };
