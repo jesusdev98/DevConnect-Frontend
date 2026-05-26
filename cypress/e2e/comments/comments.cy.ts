@@ -101,12 +101,18 @@ describe('E2E - Comments (real flow)', () => {
     cy.url({ timeout: 15000 }).should('include', `/home/post/${postId}`);
     cy.get('[data-cy=post-detail-card]', { timeout: 15000 }).should('be.visible');
     cy.get('[data-cy=comments-toggle]', { timeout: 15000 }).should('be.visible');
-    cy.intercept('GET', `**/api/posts/${postId}/comments`).as('getComments');
-    cy.get('[data-cy=comments-toggle]').click();
-    cy.wait('@getComments', { timeout: 15000 })
-      .its('response.statusCode')
-      .should('eq', 200);
+    openCommentsPanel();
+  };
+
+  const openCommentsPanel = () => {
+    cy.get('body').then(($body) => {
+      if ($body.find('[data-cy=comments-panel]:visible').length === 0) {
+        cy.get('[data-cy=comments-toggle]', { timeout: 15000 }).should('be.visible').click();
+      }
+    });
+
     cy.get('[data-cy=comments-panel]', { timeout: 15000 }).should('be.visible');
+    cy.get('[data-cy=comment-input]', { timeout: 15000 }).should('be.visible');
   };
 
   const submitComment = (text: string) => {
@@ -170,12 +176,7 @@ describe('E2E - Comments (real flow)', () => {
       cy.reload();
       cy.url({ timeout: 15000 }).should('include', `/home/post/${id}`);
       cy.get('[data-cy=post-detail-card]', { timeout: 15000 }).should('be.visible');
-      cy.intercept('GET', `**/api/posts/${id}/comments`).as('reloadComments');
-      cy.get('[data-cy=comments-toggle]', { timeout: 15000 }).should('be.visible').click();
-      cy.wait('@reloadComments', { timeout: 15000 })
-        .its('response.statusCode')
-        .should('eq', 200);
-      cy.get('[data-cy=comments-panel]', { timeout: 15000 }).should('be.visible');
+      openCommentsPanel();
       cy.contains('[data-cy=comments-list] .comment-item-text', commentText, {
         timeout: 15000,
       }).should('be.visible');

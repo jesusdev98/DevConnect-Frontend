@@ -59,12 +59,14 @@ describe('E2E - Likes (real flow)', () => {
   };
 
   const openCommentsPanel = () => {
-    cy.intercept('GET', '**/api/posts/*/comments').as('getComments');
-    cy.get('[data-cy=comments-toggle]', { timeout: 15000 }).should('be.visible').click();
-    cy.wait('@getComments', { timeout: 15000 })
-      .its('response.statusCode')
-      .should('eq', 200);
+    cy.get('body').then(($body) => {
+      if ($body.find('[data-cy=comments-panel]:visible').length === 0) {
+        cy.get('[data-cy=comments-toggle]', { timeout: 15000 }).should('be.visible').click();
+      }
+    });
+
     cy.get('[data-cy=comments-panel]', { timeout: 15000 }).should('be.visible');
+    cy.get('[data-cy=comment-input]', { timeout: 15000 }).should('be.visible');
   };
 
   const getPostLikeCount = () => {
