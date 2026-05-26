@@ -97,16 +97,28 @@ describe('E2E - Comments (real flow)', () => {
   };
 
   const goToPostDetail = (postId: number) => {
+    cy.intercept('GET', `**/api/posts/${postId}`).as('getPostDetail');
     cy.visit(`/home/post/${postId}`);
     cy.url({ timeout: 15000 }).should('include', `/home/post/${postId}`);
-    cy.get('.post-detail-page').should('be.visible');
+    cy.wait('@getPostDetail', { timeout: 15000 })
+      .its('response.statusCode')
+      .should('eq', 200);
+    cy.get('[data-cy=post-detail-card]', { timeout: 15000 }).should('be.visible');
+    cy.intercept('GET', `**/api/posts/${postId}/comments`).as('getComments');
     cy.get('[data-cy=comments-toggle]', { timeout: 15000 }).should('be.visible').click();
+    cy.wait('@getComments', { timeout: 15000 })
+      .its('response.statusCode')
+      .should('eq', 200);
     cy.get('[data-cy=comments-panel]', { timeout: 15000 }).should('be.visible');
   };
 
   const submitComment = (text: string) => {
+    cy.intercept('POST', '**/api/posts/*/comments').as('createComment');
     cy.get('[data-cy=comment-input]', { timeout: 15000 }).should('be.visible').clear().type(text);
     cy.get('[data-cy=comment-submit]').click();
+    cy.wait('@createComment', { timeout: 15000 })
+      .its('response.statusCode')
+      .should('eq', 201);
   };
 
   beforeEach(() => {
@@ -160,7 +172,12 @@ describe('E2E - Comments (real flow)', () => {
 
       cy.reload();
       cy.url({ timeout: 15000 }).should('include', `/home/post/${id}`);
+      cy.get('[data-cy=post-detail-card]', { timeout: 15000 }).should('be.visible');
+      cy.intercept('GET', `**/api/posts/${id}/comments`).as('reloadComments');
       cy.get('[data-cy=comments-toggle]', { timeout: 15000 }).should('be.visible').click();
+      cy.wait('@reloadComments', { timeout: 15000 })
+        .its('response.statusCode')
+        .should('eq', 200);
       cy.get('[data-cy=comments-panel]', { timeout: 15000 }).should('be.visible');
       cy.contains('[data-cy=comments-list] .comment-item-text', commentText, {
         timeout: 15000,

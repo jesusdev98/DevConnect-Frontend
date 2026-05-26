@@ -24,10 +24,10 @@
 
   <!-- Post -->
   <ng-container *ngIf="!isLoading && !isNotFound && !loadError">
-    <article class="post-detail-card" *ngIf="post as p">
+    <article class="post-detail-card" data-cy="post-detail-card" *ngIf="post as p">
       <header class="post-meta-top">
         <div>
-          <h1>{{ (p.title || '').trim() || 'Publicación sin título' }}</h1>
+          <h1 data-cy="post-title">{{ (p.title || '').trim() || 'Publicación sin título' }}</h1>
           <span class="pin-badge" *ngIf="p.isPinned" aria-label="Publicación fijada" title="Publicación fijada"><span class="pin-marker" aria-hidden="true"></span></span>
 
           <p class="post-author">Por {{ p.author?.username || p.author?.name || 'Usuario' }}</p>
@@ -95,6 +95,7 @@
           <button
             type="button"
             class="like-btn"
+            data-cy="post-like-button"
             [class.liked]="hasLikedPost(p.id)"
             (click)="togglePostLike(p.id)"
             [attr.aria-label]="getPostLikeAriaLabel(p.id)"
@@ -204,6 +205,7 @@
                 <button
                   type="button"
                   class="like-btn like-btn--sm"
+                  data-cy="comment-like-button"
                   [class.liked]="hasLikedComment(comment.id)"
                   (click)="toggleCommentLike(comment.id)"
                   [attr.aria-label]="getCommentLikeAriaLabel(comment.id)"
@@ -302,6 +304,7 @@
                     <button
                       type="button"
                       class="like-btn like-btn--sm"
+                      data-cy="comment-like-button"
                       [class.liked]="hasLikedComment(reply.id)"
                       (click)="toggleCommentLike(reply.id)"
                       [attr.aria-label]="getCommentLikeAriaLabel(reply.id)"

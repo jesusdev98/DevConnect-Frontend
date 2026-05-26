@@ -7,10 +7,11 @@
     <p>{{ emptyFilteredMessage }}</p>
   </div>
 
-  <article class="post-item" *ngFor="let post of posts">
+  <article class="post-item" data-cy="post-card" *ngFor="let post of posts">
     <header class="post-header">
       <div class="post-header-main">
         <h3
+          data-cy="post-title"
           role="link"
           tabindex="0"
           (click)="openPostDetail(post)"
@@ -87,6 +88,7 @@
           <button
             type="button"
             class="like-btn"
+            data-cy="post-like-button"
             [class.liked]="hasLikedPost(post.id)"
             (click)="togglePostLike(post.id)"
             [attr.aria-label]="getPostLikeAriaLabel(post.id)"
@@ -98,6 +100,7 @@
           <button
             type="button"
             class="comments-toggle"
+            data-cy="comments-toggle"
             [class.is-open]="isCommentsOpen(post.id)"
             (click)="toggleComments(post.id)"
             [attr.aria-label]="(isCommentsOpen(post.id) ? 'Ocultar' : 'Mostrar') + ' comentarios'"
@@ -109,11 +112,11 @@
         </div>
       </div>
 
-      <section class="comments-panel" *ngIf="isCommentsOpen(post.id)">
+      <section class="comments-panel" data-cy="comments-panel" *ngIf="isCommentsOpen(post.id)">
         <div class="comments-section comments-list-section">
           <h4 class="comments-section-title">Comentarios</h4>
-          <p class="comments-empty" *ngIf="comments.length === 0">Aún no hay comentarios.</p>
-          <ul class="comments-list" *ngIf="comments.length > 0">
+          <p class="comments-empty" data-cy="comments-empty" *ngIf="comments.length === 0">Aún no hay comentarios.</p>
+          <ul class="comments-list" data-cy="comments-list" *ngIf="comments.length > 0">
             <li class="comment-item" *ngFor="let comment of comments">
               <div class="comment-item-header">
                 <span class="comment-item-author">
@@ -303,12 +306,13 @@
           <div class="comment-form">
             <textarea
               #commentInput
+              data-cy="comment-input"
               [id]="'comment-' + post.id"
               rows="3"
               placeholder="Escribe un comentario..."
             ></textarea>
             <div class="comment-form-actions">
-              <button type="button" (click)="addComment(post.id, commentInput, post)">
+              <button type="button" data-cy="comment-submit" (click)="addComment(post.id, commentInput, post)">
                 Enviar
               </button>
             </div>

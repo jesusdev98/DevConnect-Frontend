@@ -38,25 +38,40 @@ describe('E2E - Likes (real flow)', () => {
   const createPostAndOpenDetail = (title: string, content: string) => {
     cy.visit('/home/create-post');
     cy.get('[data-cy=home-root]').should('be.visible');
+    cy.intercept('POST', '**/api/posts').as('createPost');
     cy.createPostByUI({
       title,
       content,
       tagName: 'Angular',
     });
 
-    cy.url({ timeout: 15000 }).should('include', '/home');
-    cy.contains('article.post-item h3', title, { timeout: 15000 }).should('be.visible').click();
-    cy.url({ timeout: 15000 }).should('include', '/home/post/');
-    cy.get('.post-detail-page').should('be.visible');
+    cy.wait('@createPost', { timeout: 15000 }).then((interception) => {
+      expect(interception.response?.statusCode, 'create post status').to.eq(201);
+      const postId = interception.response?.body?.data?.id;
+      expect(postId, 'created post id').to.be.a('number').and.be.greaterThan(0);
+
+      cy.intercept('GET', `**/api/posts/${postId}`).as('getPostDetail');
+      cy.visit(`/home/post/${postId}`);
+      cy.url({ timeout: 15000 }).should('include', `/home/post/${postId}`);
+      cy.wait('@getPostDetail', { timeout: 15000 })
+        .its('response.statusCode')
+        .should('eq', 200);
+      cy.get('[data-cy=post-detail-card]', { timeout: 15000 }).should('be.visible');
+      cy.get('[data-cy=post-title]').should('contain.text', title);
+    });
   };
 
   const openCommentsPanel = () => {
-    cy.get('button.comments-toggle', { timeout: 15000 }).should('be.visible').click();
-    cy.get('.comments-panel', { timeout: 15000 }).should('be.visible');
+    cy.intercept('GET', '**/api/posts/*/comments').as('getComments');
+    cy.get('[data-cy=comments-toggle]', { timeout: 15000 }).should('be.visible').click();
+    cy.wait('@getComments', { timeout: 15000 })
+      .its('response.statusCode')
+      .should('eq', 200);
+    cy.get('[data-cy=comments-panel]', { timeout: 15000 }).should('be.visible');
   };
 
   const getPostLikeCount = () => {
-    return cy.get('.post-footer .like-btn .like-count').invoke('text').then((text) => Number.parseInt(text.trim(), 10));
+    return cy.get('[data-cy=post-like-button] .like-count').invoke('text').then((text) => Number.parseInt(text.trim(), 10));
   };
 
   beforeEach(() => {
@@ -74,8 +89,10 @@ describe('E2E - Likes (real flow)', () => {
     loginAsUser(user);
     createPostAndOpenDetail(postTitle, postContent);
 
-    cy.get('.post-footer .like-btn').should('be.visible').and('not.have.class', 'liked').click();
-    cy.get('.post-footer .like-btn').should('have.class', 'liked');
+    cy.intercept('POST', '**/api/posts/*/likes/toggle').as('togglePostLike');
+    cy.get('[data-cy=post-like-button]').should('be.visible').and('not.have.class', 'liked').click();
+    cy.wait('@togglePostLike', { timeout: 15000 }).its('response.statusCode').should('eq', 200);
+    cy.get('[data-cy=post-like-button]').should('have.class', 'liked');
   });
 
   it('unlikes a post after liking it', () => {
@@ -87,10 +104,13 @@ describe('E2E - Likes (real flow)', () => {
     loginAsUser(user);
     createPostAndOpenDetail(postTitle, postContent);
 
-    cy.get('.post-footer .like-btn').click();
-    cy.get('.post-footer .like-btn').should('have.class', 'liked');
-    cy.get('.post-footer .like-btn').click();
-    cy.get('.post-footer .like-btn').should('not.have.class', 'liked');
+    cy.intercept('POST', '**/api/posts/*/likes/toggle').as('togglePostLike');
+    cy.get('[data-cy=post-like-button]').click();
+    cy.wait('@togglePostLike', { timeout: 15000 }).its('response.statusCode').should('eq', 200);
+    cy.get('[data-cy=post-like-button]').should('have.class', 'liked');
+    cy.get('[data-cy=post-like-button]').click();
+    cy.wait('@togglePostLike', { timeout: 15000 }).its('response.statusCode').should('eq', 200);
+    cy.get('[data-cy=post-like-button]').should('not.have.class', 'liked');
   });
 
   it('likes a comment in post detail', () => {
@@ -104,13 +124,17 @@ describe('E2E - Likes (real flow)', () => {
     createPostAndOpenDetail(postTitle, postContent);
     openCommentsPanel();
 
-    cy.get('.comments-form-section textarea').should('be.visible').clear().type(commentText);
-    cy.contains('.comment-form-actions button', 'Enviar').click();
-    cy.contains('.comments-list .comment-item-text', commentText, { timeout: 15000 }).should('be.visible');
+    cy.intercept('POST', '**/api/posts/*/comments').as('createComment');
+    cy.get('[data-cy=comment-input]').should('be.visible').clear().type(commentText);
+    cy.get('[data-cy=comment-submit]').click();
+    cy.wait('@createComment', { timeout: 15000 }).its('response.statusCode').should('eq', 201);
+    cy.contains('[data-cy=comments-list] .comment-item-text', commentText, { timeout: 15000 }).should('be.visible');
 
     cy.contains('li.comment-item', commentText).within(() => {
-      cy.get('button.like-btn.like-btn--sm').first().should('be.visible').and('not.have.class', 'liked').click();
-      cy.get('button.like-btn.like-btn--sm').first().should('have.class', 'liked');
+      cy.intercept('POST', '**/api/comments/*/likes/toggle').as('toggleCommentLike');
+      cy.get('[data-cy=comment-like-button]').first().should('be.visible').and('not.have.class', 'liked').click();
+      cy.wait('@toggleCommentLike', { timeout: 15000 }).its('response.statusCode').should('eq', 200);
+      cy.get('[data-cy=comment-like-button]').first().should('have.class', 'liked');
     });
   });
 
@@ -124,15 +148,18 @@ describe('E2E - Likes (real flow)', () => {
     createPostAndOpenDetail(postTitle, postContent);
 
     getPostLikeCount().then((initialCount) => {
-      cy.get('.post-footer .like-btn').click();
-      cy.get('.post-footer .like-btn').should('have.class', 'liked');
-      cy.get('.post-footer .like-btn .like-count').invoke('text').then((text) => {
+      cy.intercept('POST', '**/api/posts/*/likes/toggle').as('togglePostLike');
+      cy.get('[data-cy=post-like-button]').click();
+      cy.wait('@togglePostLike', { timeout: 15000 }).its('response.statusCode').should('eq', 200);
+      cy.get('[data-cy=post-like-button]').should('have.class', 'liked');
+      cy.get('[data-cy=post-like-button] .like-count').invoke('text').then((text) => {
         expect(text.trim()).to.eq(`${initialCount + 1}`);
       });
 
-      cy.get('.post-footer .like-btn').click();
-      cy.get('.post-footer .like-btn').should('not.have.class', 'liked');
-      cy.get('.post-footer .like-btn .like-count').invoke('text').then((text) => {
+      cy.get('[data-cy=post-like-button]').click();
+      cy.wait('@togglePostLike', { timeout: 15000 }).its('response.statusCode').should('eq', 200);
+      cy.get('[data-cy=post-like-button]').should('not.have.class', 'liked');
+      cy.get('[data-cy=post-like-button] .like-count').invoke('text').then((text) => {
         expect(text.trim()).to.eq(`${initialCount}`);
       });
     });
