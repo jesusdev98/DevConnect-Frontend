@@ -18,6 +18,10 @@ const AUTH_ME_ALIAS = 'authMeRequest';
 const AUTH_CHANGE_PASSWORD_ALIAS = 'authChangePasswordRequest';
 const AUTH_PROFILE_UPDATE_ALIAS = 'authProfileUpdateRequest';
 const ADMIN_DELETE_USER_ALIAS = 'adminDeleteUser';
+const CONTENT_CREATE_POST_ALIAS = 'contentCreatePost';
+const CONTENT_CREATE_COMMENT_ALIAS = 'contentCreateComment';
+const CONTENT_TOGGLE_POST_LIKE_ALIAS = 'contentTogglePostLike';
+const CONTENT_TOGGLE_COMMENT_LIKE_ALIAS = 'contentToggleCommentLike';
 const ME_ROUTE_PATH = '/api/auth/me';
 const LOGIN_ROUTE_PATH = '/api/auth/login';
 const REGISTER_ROUTE_PATH = '/api/auth/register';
@@ -224,6 +228,22 @@ const resolveBrowserAuthAlias = (method: string, url: string): string | undefine
 
   if (normalizedMethod === 'DELETE' && pathname.startsWith(ADMIN_USERS_ROUTE_PREFIX)) {
     return ADMIN_DELETE_USER_ALIAS;
+  }
+
+  if (normalizedMethod === 'POST' && pathname === '/api/posts') {
+    return CONTENT_CREATE_POST_ALIAS;
+  }
+
+  if (normalizedMethod === 'POST' && /^\/api\/posts\/\d+\/comments\/?$/.test(pathname)) {
+    return CONTENT_CREATE_COMMENT_ALIAS;
+  }
+
+  if (normalizedMethod === 'POST' && /^\/api\/posts\/\d+\/likes\/toggle\/?$/.test(pathname)) {
+    return CONTENT_TOGGLE_POST_LIKE_ALIAS;
+  }
+
+  if (normalizedMethod === 'POST' && /^\/api\/comments\/\d+\/likes\/toggle\/?$/.test(pathname)) {
+    return CONTENT_TOGGLE_COMMENT_LIKE_ALIAS;
   }
 
   return undefined;

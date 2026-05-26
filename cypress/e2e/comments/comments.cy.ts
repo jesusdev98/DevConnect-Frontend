@@ -117,7 +117,6 @@ describe('E2E - Comments (real flow)', () => {
   };
 
   const submitComment = (text: string) => {
-    cy.intercept('POST', '**/api/**').as('createCommentMutation');
     cy.get('[data-cy=comment-input]', { timeout: 15000 })
       .should('be.visible')
       .clear()
@@ -127,9 +126,9 @@ describe('E2E - Comments (real flow)', () => {
       .should('be.visible')
       .and('not.be.disabled')
       .click();
-    cy.wait('@createCommentMutation', { timeout: 15000 }).then((interception) => {
+    cy.wait('@contentCreateComment', { timeout: 15000 }).then((interception) => {
       const pathname = new URL(interception.request.url).pathname.replace(/\/$/, '');
-      cy.task('log', `[createCommentMutation] ${interception.request.method} ${interception.request.url} -> ${interception.response?.statusCode ?? 'NO_RESPONSE'}`, { log: false });
+      cy.task('log', `[contentCreateComment] ${interception.request.method} ${interception.request.url} -> ${interception.response?.statusCode ?? 'NO_RESPONSE'}`, { log: false });
       expect(pathname, 'comment create endpoint').to.match(/^\/api\/posts\/\d+\/comments$/);
       expect(interception.response?.statusCode, 'comment create status').to.eq(201);
     });
