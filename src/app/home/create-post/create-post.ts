@@ -430,6 +430,7 @@ export class CreatePost implements OnInit {
       createdAt: typeof raw['createdAt'] === 'string' ? raw['createdAt'] : '',
       commentsCount: Number(raw['commentsCount']) >= 0 ? Number(raw['commentsCount']) : 0,
       likesCount: Number(raw['likesCount']) >= 0 ? Number(raw['likesCount']) : 0,
+      isPinned: Boolean(raw['isPinned'] ?? raw['is_pinned']),
       likedByCurrentUser: Boolean(raw['likedByCurrentUser']),
       isSaved: Boolean(raw['isSaved'] ?? raw['is_saved']),
       author,

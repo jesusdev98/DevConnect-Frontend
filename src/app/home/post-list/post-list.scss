@@ -78,6 +78,46 @@
   min-width: 0;
 }
 
+.pin-badge {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 0 6px;
+  padding: 2px 0;
+}
+
+.pin-marker {
+  position: relative;
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 35% 35%, #fb7185 0%, #ef4444 55%, #b91c1c 100%);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.45);
+}
+
+.pin-marker::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 8px;
+  width: 1px;
+  height: 11px;
+  background: #94a3b8;
+  transform: rotate(12deg);
+  transform-origin: top center;
+}
+
+.pin-badge--comment .pin-marker {
+  width: 8px;
+  height: 8px;
+}
+
+.pin-badge--comment .pin-marker::after {
+  left: 3px;
+  top: 6px;
+  height: 9px;
+}
+
 .post-header-actions {
   display: flex;
   align-items: center;
@@ -299,6 +339,9 @@
 }
 
 .comment-item-author {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: #0f172a;
   font-size: 0.82rem;
   font-weight: 700;
@@ -505,6 +548,42 @@
   color: #2563eb;
   opacity: 0;
   pointer-events: none;
+}
+
+.pin-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 10px;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  color: #b91c1c;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.pin-toggle-btn:hover {
+  background: #fff1f2;
+  border-color: #fda4af;
+  color: #9f1239;
+}
+
+.pin-toggle-btn:focus-visible {
+  outline: 2px solid rgba(37, 99, 235, 0.18);
+  outline-offset: 1px;
+}
+
+.pin-toggle-btn app-icon-pin {
+  display: inline-flex;
+  line-height: 0;
+}
+
+.pin-toggle-btn .pin-icon {
+  width: 15px;
+  height: 15px;
 }
 
 .bookmark-icon {

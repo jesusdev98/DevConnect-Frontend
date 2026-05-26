@@ -50,6 +50,7 @@ export interface Post {
   createdAt: string;
   commentsCount: number;
   likesCount: number;
+  isPinned: boolean;
   likedByCurrentUser: boolean;
   isSaved: boolean;
   author: {
@@ -131,6 +132,20 @@ export class PostService {
 
         throw new Error('No se pudo normalizar la publicación actualizada.');
       }),
+    ));
+
+    return request$.pipe(
+      catchError((error: unknown) => this.retryAfterCsrfRefresh(error, request$)),
+    );
+  }
+
+  toggleAdminPin(postId: number): Observable<{ id: number; isPinned: boolean }> {
+    const request$ = this.authService.runWhenAuthenticated(() => this.http.post<ApiResponse<{ id: number; isPinned: boolean }>>(
+      `${environment.apiUrl}/api/admin/posts/${postId}/pin-toggle`,
+      {},
+      { withCredentials: true },
+    ).pipe(
+      map((response) => response.data),
     ));
 
     return request$.pipe(
@@ -417,6 +432,7 @@ export class PostService {
     const likesCount = this.toCount(value['likesCount'] ?? value['likes_count']);
     const likedByCurrentUser = this.toBoolean(value['likedByCurrentUser'] ?? value['liked_by_current_user']);
     const isSaved = this.toBoolean(value['isSaved'] ?? value['is_saved']);
+    const isPinned = this.toBoolean(value['isPinned'] ?? value['is_pinned']);
     const author = this.normalizeAuthor(value['author'] ?? value['user']);
 
     return {
@@ -428,6 +444,7 @@ export class PostService {
       createdAt,
       commentsCount,
       likesCount,
+      isPinned,
       likedByCurrentUser,
       isSaved,
       author,

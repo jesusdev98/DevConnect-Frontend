@@ -14,6 +14,7 @@ export interface PostComment {
   createdAt: string;
   likesCount: number;
   likedByCurrentUser: boolean;
+  isPinned: boolean;
   parentId: number | null;
   replies?: PostComment[];
 }
@@ -112,6 +113,25 @@ export class CommentService {
     );
   }
 
+  toggleAdminPin(commentId: number): Observable<{ id: number; postId: number; isPinned: boolean }> {
+    const request$ = this.authService.runWhenAuthenticated(() => this.http
+      .post<{ data: { id: number; postId: number; isPinned: boolean } }>(
+        `${environment.apiUrl}/api/admin/comments/${commentId}/pin-toggle`,
+        {},
+        { withCredentials: true },
+      )
+      .pipe(map((res) => res.data)));
+
+    return request$.pipe(
+      catchError((error: unknown) => {
+        if (!(error instanceof HttpErrorResponse) || error.status !== 419) {
+          return throwError(() => error);
+        }
+        return this.authService.csrf().pipe(switchMap(() => request$));
+      }),
+    );
+  }
+
   getCommentCountByUser(userId: number): number {
     let count = 0;
     this.cache.forEach((comments) => {
@@ -138,6 +158,7 @@ export class CommentService {
       createdAt: comment.createdAt ?? '',
       likesCount: Number(comment.likesCount ?? 0),
       likedByCurrentUser: Boolean(comment.likedByCurrentUser),
+      isPinned: Boolean(comment.isPinned),
       parentId: comment.parentId ?? null,
     };
 

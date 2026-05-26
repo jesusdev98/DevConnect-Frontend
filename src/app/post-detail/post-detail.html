@@ -28,6 +28,7 @@
       <header class="post-meta-top">
         <div>
           <h1>{{ (p.title || '').trim() || 'Publicación sin título' }}</h1>
+          <span class="pin-badge" *ngIf="p.isPinned" aria-label="Publicación fijada" title="Publicación fijada"><span class="pin-marker" aria-hidden="true"></span></span>
 
           <p class="post-author">Por {{ p.author?.username || p.author?.name || 'Usuario' }}</p>
         </div>
@@ -57,6 +58,16 @@
             title="Editar publicación"
           >
             <app-icon-edit></app-icon-edit>
+          </button>
+          <button
+            *ngIf="canTogglePinPost()"
+            type="button"
+            class="pin-toggle-btn"
+            (click)="togglePostPin(p)"
+            [attr.aria-label]="p.isPinned ? 'Desfijar publicación' : 'Fijar publicación'"
+            [attr.title]="p.isPinned ? 'Desfijar publicación' : 'Fijar publicación'"
+          >
+            {{ p.isPinned ? 'Desfijar' : 'Fijar' }}
           </button>
           <button
             *ngIf="canDeleteCurrentPost"
@@ -129,9 +140,22 @@
           >
             <li class="comment-item" *ngFor="let comment of comments">
               <div class="comment-item-header">
-                <span class="comment-item-author">{{ comment.username }}</span>
+                <span class="comment-item-author">
+                  {{ comment.username }}
+                  <span class="pin-badge pin-badge--comment" *ngIf="comment.isPinned" aria-label="Comentario fijado" title="Comentario fijado"><span class="pin-marker" aria-hidden="true"></span></span>
+                </span>
                 <div class="comment-item-actions">
                   <small class="comment-item-date">{{ comment.createdAt | date: 'short' }}</small>
+                  <button
+                    *ngIf="canTogglePinComment(comment)"
+                    type="button"
+                    class="pin-toggle-btn pin-toggle-btn--comment"
+                    (click)="toggleCommentPin(comment)"
+                    [attr.aria-label]="comment.isPinned ? 'Desfijar comentario' : 'Fijar comentario'"
+                    [attr.title]="comment.isPinned ? 'Desfijar comentario' : 'Fijar comentario'"
+                  >
+                    {{ comment.isPinned ? 'Desfijar' : 'Fijar' }}
+                  </button>
                   <button
                     *ngIf="canEditComment(comment)"
                     type="button"

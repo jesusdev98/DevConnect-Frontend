@@ -179,6 +179,206 @@ describe('E2E - Posts (mocked API)', () => {
     });
   });
 
+  it('does not show pin actions to non-admin users', () => {
+    const visiblePost = buildMockPost({
+      id: 11,
+      title: 'Post sin pin visible',
+      content: 'Contenido suficiente para comprobar permisos visuales.',
+    });
+
+    cy.intercept('GET', '**/api/posts*', {
+      statusCode: 200,
+      body: {
+        success: true,
+        message: 'ok',
+        data: [visiblePost],
+      },
+    }).as('getPosts');
+
+    cy.visit('/home');
+    cy.waitForPostsBootstrap({ waitPosts: true });
+
+    cy.contains('article.post-item h3', visiblePost.title)
+      .parents('article.post-item')
+      .within(() => {
+        cy.contains('button', 'Fijar').should('not.exist');
+      });
+  });
+
+  it('lets an admin pin a post and refreshes the feed with the pinned badge first', () => {
+    const unpinnedPost = buildMockPost({
+      id: 41,
+      title: 'Post fijable por admin',
+      content: 'Contenido para probar el fijado en el feed.',
+      isPinned: false,
+    });
+    const pinnedPost = {
+      ...unpinnedPost,
+      isPinned: true,
+    };
+    let feedPinned = false;
+
+    cy.intercept('GET', '**/api/auth/me', {
+      statusCode: 200,
+      body: {
+        success: true,
+        message: 'ok',
+        data: {
+          id: 99,
+          username: 'admin-e2e',
+          role: 'admin',
+        },
+      },
+    }).as('authMe');
+
+    cy.intercept('GET', '**/api/posts*', (req) => {
+      req.reply({
+        statusCode: 200,
+        body: {
+          success: true,
+          message: 'ok',
+          data: [feedPinned ? pinnedPost : unpinnedPost],
+        },
+      });
+    }).as('getPosts');
+
+    cy.intercept('POST', '**/api/admin/posts/41/pin-toggle', (req) => {
+      feedPinned = true;
+      req.reply({
+        statusCode: 200,
+        body: {
+          success: true,
+          message: 'Publicacion fijada correctamente.',
+          data: {
+            id: 41,
+            isPinned: true,
+          },
+        },
+      });
+    }).as('togglePostPin');
+
+    cy.visit('/home');
+    cy.waitForPostsBootstrap({ waitPosts: true });
+
+    cy.contains('article.post-item h3', unpinnedPost.title)
+      .parents('article.post-item')
+      .within(() => {
+        cy.contains('button', 'Fijar').click();
+      });
+
+    cy.wait('@togglePostPin');
+    cy.wait('@getPosts');
+
+    cy.get('article.post-item').first().within(() => {
+      cy.contains('h3', pinnedPost.title).should('be.visible');
+      cy.get('.pin-badge').should('be.visible');
+      cy.get('.pin-badge .pin-marker').should('exist');
+      cy.contains('button', 'Desfijar').should('be.visible');
+    });
+  });
+
+  it('lets an admin pin a root comment and refreshes the opened thread', () => {
+    const post = buildMockPost({
+      id: 77,
+      title: 'Post con comentarios fijables',
+      content: 'Contenido para probar fijado admin en comentarios.',
+    });
+    const initialComments = [
+      {
+        id: 301,
+        postId: 77,
+        userId: 10,
+        username: 'ada',
+        text: 'Comentario normal',
+        createdAt: new Date().toISOString(),
+        likesCount: 0,
+        likedByCurrentUser: false,
+        isPinned: false,
+        parentId: null,
+        replies: [],
+      },
+    ];
+    const pinnedComments = [
+      {
+        ...initialComments[0],
+        isPinned: true,
+      },
+    ];
+    let commentsPinned = false;
+
+    cy.intercept('GET', '**/api/auth/me', {
+      statusCode: 200,
+      body: {
+        success: true,
+        message: 'ok',
+        data: {
+          id: 99,
+          username: 'admin-e2e',
+          role: 'admin',
+        },
+      },
+    }).as('authMe');
+
+    cy.intercept('GET', '**/api/posts*', {
+      statusCode: 200,
+      body: {
+        success: true,
+        message: 'ok',
+        data: [post],
+      },
+    }).as('getPosts');
+
+    cy.intercept('GET', '**/api/posts/77/comments', (req) => {
+      req.reply({
+        statusCode: 200,
+        body: {
+          success: true,
+          message: 'ok',
+          data: commentsPinned ? pinnedComments : initialComments,
+        },
+      });
+    }).as('getComments');
+
+    cy.intercept('POST', '**/api/admin/comments/301/pin-toggle', (req) => {
+      commentsPinned = true;
+      req.reply({
+        statusCode: 200,
+        body: {
+          success: true,
+          message: 'Comentario fijado correctamente.',
+          data: {
+            id: 301,
+            postId: 77,
+            isPinned: true,
+          },
+        },
+      });
+    }).as('toggleCommentPin');
+
+    cy.visit('/home');
+    cy.waitForPostsBootstrap({ waitPosts: true });
+
+    cy.contains('article.post-item h3', post.title)
+      .parents('article.post-item')
+      .within(() => {
+        cy.contains('button.comments-toggle', '0').click();
+      });
+
+    cy.wait('@getComments');
+    cy.contains('.comment-item', 'Comentario normal').within(() => {
+      cy.contains('button', 'Fijar').click();
+    });
+
+    cy.wait('@toggleCommentPin');
+    cy.wait('@getComments');
+
+    cy.contains('.comment-item', 'Comentario normal').within(() => {
+      cy.get('.pin-badge').should('be.visible');
+      cy.get('.pin-badge .pin-marker').should('exist');
+      cy.contains('button', 'Desfijar').should('be.visible');
+    });
+  });
+
   it('requests filtered feed with tag_ids[] and match when a tag is selected', () => {
     const filteredPost = buildMockPost({
       id: 500,

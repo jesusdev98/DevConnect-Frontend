@@ -280,6 +280,42 @@ export class PostList {
     });
   }
 
+  canTogglePinPost(): boolean {
+    return this.authService.getCurrentUser()?.role === 'admin';
+  }
+
+  canTogglePinComment(comment: PostComment): boolean {
+    return this.authService.getCurrentUser()?.role === 'admin' && comment.parentId === null;
+  }
+
+  togglePostPin(post: Post): void {
+    this.postService.toggleAdminPin(post.id).subscribe({
+      next: (result) => {
+        post.isPinned = result.isPinned;
+        this.feedback.success(result.isPinned ? 'Publicación fijada correctamente.' : 'Publicación desfijada correctamente.');
+        this.resetFeed();
+        this.loadNextPage();
+      },
+      error: () => {
+        this.feedback.error('No se pudo actualizar el estado de fijado de la publicación.');
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  toggleCommentPin(post: Post, comment: PostComment): void {
+    this.commentService.toggleAdminPin(comment.id).subscribe({
+      next: (result) => {
+        this.feedback.success(result.isPinned ? 'Comentario fijado correctamente.' : 'Comentario desfijado correctamente.');
+        this.loadCommentsForPost(post.id);
+      },
+      error: () => {
+        this.feedback.error('No se pudo actualizar el estado de fijado del comentario.');
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
   // Añade un comentario nuevo al hilo del post.
   addComment(postId: number, textarea: HTMLTextAreaElement, post: Post): void {
     const text = textarea.value.trim();
@@ -289,6 +325,7 @@ export class PostList {
       const current = this.commentsMap.get(postId) ?? [];
       const rootComment: PostComment = {
         ...comment,
+        isPinned: comment.isPinned ?? false,
         parentId: comment.parentId ?? null,
         replies: [],
       };

@@ -81,6 +81,7 @@ describe('PostService', () => {
           },
           commentsCount: 4,
           likesCount: 9,
+          isPinned: true,
           likedByCurrentUser: true,
           is_saved: false,
         },
@@ -99,6 +100,7 @@ describe('PostService', () => {
     expect(result.posts.length).toBe(1);
     expect(result.posts[0].id).toBe(7);
     expect(result.posts[0].tagIds).toEqual([1, 2]);
+    expect(result.posts[0].isPinned).toBeTruthy();
   });
 
   it('loads all user posts across paginated pages', () => {
@@ -127,6 +129,7 @@ describe('PostService', () => {
           author: null,
           commentsCount: 0,
           likesCount: 0,
+          isPinned: false,
           likedByCurrentUser: false,
           is_saved: false,
         },
@@ -158,6 +161,7 @@ describe('PostService', () => {
           author: null,
           commentsCount: 0,
           likesCount: 0,
+          isPinned: false,
           likedByCurrentUser: false,
           is_saved: false,
         },
@@ -173,5 +177,32 @@ describe('PostService', () => {
     expect(result.length).toBe(2);
     expect(result[0].id).toBe(1);
     expect(result[1].id).toBe(2);
+  });
+
+  it('calls the admin pin toggle endpoint for posts', () => {
+    let result: any;
+
+    service.toggleAdminPin(33).subscribe((payload) => {
+      result = payload;
+    });
+
+    const request = httpMock.expectOne(`${environment.apiUrl}/api/admin/posts/33/pin-toggle`);
+
+    expect(request.request.method).toBe('POST');
+    expect(request.request.withCredentials).toBeTruthy();
+
+    request.flush({
+      success: true,
+      message: 'OK',
+      data: {
+        id: 33,
+        isPinned: true,
+      },
+    });
+
+    expect(result).toEqual({
+      id: 33,
+      isPinned: true,
+    });
   });
 });

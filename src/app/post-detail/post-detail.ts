@@ -257,6 +257,7 @@ export class PostDetail implements OnInit, OnDestroy {
       createdAt: typeof raw['createdAt'] === 'string' ? raw['createdAt'] : '',
       commentsCount: Number(raw['commentsCount']) >= 0 ? Number(raw['commentsCount']) : 0,
       likesCount: Number(raw['likesCount']) >= 0 ? Number(raw['likesCount']) : 0,
+      isPinned: Boolean(raw['isPinned'] ?? raw['is_pinned']),
       likedByCurrentUser: Boolean(raw['likedByCurrentUser']),
       isSaved: Boolean(raw['isSaved'] ?? raw['is_saved']),
       author,
@@ -372,6 +373,46 @@ export class PostDetail implements OnInit, OnDestroy {
 
   getPostLikeAriaLabel(postId: number): string {
     return this.hasLikedPost(postId) ? 'Quitar me gusta de la publicación' : 'Marcar me gusta en la publicación';
+  }
+
+  canTogglePinPost(): boolean {
+    return this.authService.getCurrentUser()?.role === 'admin';
+  }
+
+  canTogglePinComment(comment: PostComment): boolean {
+    return this.authService.getCurrentUser()?.role === 'admin' && comment.parentId === null;
+  }
+
+  togglePostPin(post: Post): void {
+    this.postService.toggleAdminPin(post.id).subscribe({
+      next: (result) => {
+        post.isPinned = result.isPinned;
+        this.feedback.success(result.isPinned ? 'Publicación fijada correctamente.' : 'Publicación desfijada correctamente.');
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.feedback.error('No se pudo actualizar el estado de fijado de la publicación.');
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  toggleCommentPin(comment: PostComment): void {
+    const postId = Number(this.post?.id);
+    if (!Number.isFinite(postId) || postId <= 0) {
+      return;
+    }
+
+    this.commentService.toggleAdminPin(comment.id).subscribe({
+      next: (result) => {
+        this.feedback.success(result.isPinned ? 'Comentario fijado correctamente.' : 'Comentario desfijado correctamente.');
+        this.loadCommentTree(postId);
+      },
+      error: () => {
+        this.feedback.error('No se pudo actualizar el estado de fijado del comentario.');
+        this.cdr.detectChanges();
+      },
+    });
   }
 
   toggleCommentLike(commentId: number): void {
@@ -547,6 +588,7 @@ export class PostDetail implements OnInit, OnDestroy {
       next: (comment) => {
         const rootComment: PostComment = {
           ...comment,
+          isPinned: comment.isPinned ?? false,
           parentId: comment.parentId ?? null,
           replies: [],
         };

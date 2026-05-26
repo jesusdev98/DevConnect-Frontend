@@ -4,6 +4,7 @@ export type MockPost = {
   content: string;
   tags: string[];
   createdAt: string;
+  isPinned: boolean;
 };
 
 export const buildMockPost = (overrides: Partial<MockPost> = {}): MockPost => {
@@ -15,6 +16,7 @@ export const buildMockPost = (overrides: Partial<MockPost> = {}): MockPost => {
     content: 'Contenido de prueba para Cypress.',
     tags: ['General'],
     createdAt: nowIso,
+    isPinned: false,
     ...overrides,
   };
 };
