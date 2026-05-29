@@ -159,7 +159,7 @@ Cypress.Commands.add('seedAdminUser', (): Cypress.Chainable<void> => {
   return cy
     .exec(command, { failOnNonZeroExit: true })
     .then((result) => {
-      expect(result.code ?? 0).to.eq(0);
+      expect(result.exitCode ?? 0).to.eq(0);
     })
     .then(() => undefined);
 });
