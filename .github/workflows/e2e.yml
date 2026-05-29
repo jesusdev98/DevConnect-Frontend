@@ -17,6 +17,7 @@ permissions:
 
 env:
   CYPRESS_browserBackendUrl: http://127.0.0.1:4200
+  CYPRESS_DEFAULT_BACKEND_URL: https://devconnect-backend-production-c95f.up.railway.app
   CYPRESS_adminEmail: ${{ secrets.CYPRESS_ADMIN_EMAIL }}
   CYPRESS_adminPassword: ${{ secrets.CYPRESS_ADMIN_PASSWORD }}
 
@@ -55,18 +56,17 @@ jobs:
         env:
           BACKEND_URL_INPUT: ${{ github.event.inputs.backend_url }}
           BACKEND_URL_VARIABLE: ${{ vars.CYPRESS_BACKEND_URL }}
-          BACKEND_URL_SECRET: ${{ secrets.CYPRESS_BACKEND_URL }}
         run: |
-          CYPRESS_backendUrl="${BACKEND_URL_INPUT:-${BACKEND_URL_VARIABLE:-${BACKEND_URL_SECRET:-}}}"
+          CYPRESS_backendUrl="${BACKEND_URL_INPUT:-${BACKEND_URL_VARIABLE:-${CYPRESS_DEFAULT_BACKEND_URL:-}}}"
 
           if [ -z "$CYPRESS_backendUrl" ]; then
-            echo "::error title=Missing Cypress backend URL::Set repository variable CYPRESS_BACKEND_URL or pass workflow_dispatch backend_url. The Cypress suite needs a live Railway backend for Sanctum and API requests."
+            echo "::error title=Missing Cypress backend URL::Set repository variable CYPRESS_BACKEND_URL or pass workflow_dispatch backend_url. The Cypress suite needs a live Laravel backend for Sanctum and API requests."
             exit 1
           fi
 
           CYPRESS_backendUrl="${CYPRESS_backendUrl%/}"
           echo "CYPRESS_backendUrl=$CYPRESS_backendUrl" >> "$GITHUB_ENV"
-          echo "Using backend URL: $CYPRESS_backendUrl"
+          echo "Using backend URL host: $(node -e "console.log(new URL(process.argv[1]).host)" "$CYPRESS_backendUrl")"
 
       - name: Wait for backend readiness
         run: |

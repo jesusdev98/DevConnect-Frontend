@@ -8,6 +8,9 @@ allowBuilds:
   lmdb: true
   msgpackr-extract: true
 
+overrides:
+  tmp: 0.2.6
+
 minimumReleaseAgeExclude:
   - '@angular/common@21.2.15'
   - '@angular/compiler@21.2.15'
